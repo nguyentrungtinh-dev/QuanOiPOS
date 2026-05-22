@@ -101,6 +101,20 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> forgotPassword({required String email}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> confirmForgotPassword({
+    required String email,
+    required String otpCode,
+    required String newPassword,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<void> logout() {
     throw UnimplementedError();
   }

@@ -7,6 +7,7 @@ class LoginForm extends StatefulWidget {
   final bool isLoading;
   final String? errorMessage;
   final Future<void> Function(String email, String password) onSubmit;
+  final VoidCallback onForgotPasswordPressed;
   final VoidCallback onRegisterPressed;
 
   const LoginForm({
@@ -14,6 +15,7 @@ class LoginForm extends StatefulWidget {
     required this.isLoading,
     required this.errorMessage,
     required this.onSubmit,
+    required this.onForgotPasswordPressed,
     required this.onRegisterPressed,
   });
 
@@ -101,23 +103,39 @@ class _LoginFormState extends State<LoginForm> {
             ),
           ],
           const SizedBox(height: AppConstants.spacingSm),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: widget.onRegisterPressed,
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(0, 0),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Text(
-                'Đăng ký ngay',
-                style: AppTextStyles.labelSm.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: widget.onForgotPasswordPressed,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Quên mật khẩu?',
+                  style: AppTextStyles.labelSm.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
-            ),
+              TextButton(
+                onPressed: widget.onRegisterPressed,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Đăng ký ngay',
+                  style: AppTextStyles.labelSm.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppConstants.spacingLg),
           ElevatedButton(

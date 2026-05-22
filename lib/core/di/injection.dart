@@ -17,6 +17,8 @@ import '../../features/auth/domain/usecases/logout_use_case.dart';
 import '../../features/auth/domain/usecases/restore_session_use_case.dart';
 import '../../features/auth/domain/usecases/register_use_case.dart';
 import '../../features/auth/domain/usecases/confirm_registration_use_case.dart';
+import '../../features/auth/domain/usecases/forgot_password_use_case.dart';
+import '../../features/auth/domain/usecases/confirm_forgot_password_use_case.dart';
 
 final GetIt locator = GetIt.instance;
 
@@ -76,5 +78,11 @@ Future<void> setupDependencies({bool enableLogging = false}) async {
   );
   locator.registerLazySingleton<ConfirmRegistrationUseCase>(
     () => ConfirmRegistrationUseCase(locator<AuthRepository>()),
+  );
+  locator.registerLazySingleton<ForgotPasswordUseCase>(
+    () => ForgotPasswordUseCase(locator<AuthRepository>()),
+  );
+  locator.registerLazySingleton<ConfirmForgotPasswordUseCase>(
+    () => ConfirmForgotPasswordUseCase(locator<AuthRepository>()),
   );
 }

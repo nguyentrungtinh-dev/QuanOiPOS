@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/index.dart';
 import '../controllers/auth_state.dart';
+import '../controllers/forgot_password_state.dart';
 import '../controllers/register_state.dart';
 import '../providers/auth_providers.dart';
+import '../widgets/forgot_password_form.dart';
 import '../widgets/login_form.dart';
 import '../widgets/register_form.dart';
 
-enum AuthFormMode { login, register }
+enum AuthFormMode { login, register, forgotPassword }
 
 class AuthPage extends ConsumerStatefulWidget {
   const AuthPage({super.key});
@@ -40,6 +42,28 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       }
 
       ref.read(registerNotifierProvider.notifier).reset();
+    });
+
+    ref.listen<ForgotPasswordState>(forgotPasswordNotifierProvider, (
+      previous,
+      next,
+    ) {
+      if (previous?.status == ForgotPasswordStatus.success ||
+          next.status != ForgotPasswordStatus.success) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đặt lại mật khẩu thành công. Vui lòng đăng nhập.'),
+        ),
+      );
+
+      if (mounted) {
+        setState(() => _mode = AuthFormMode.login);
+      }
+
+      ref.read(forgotPasswordNotifierProvider.notifier).reset();
     });
 
     final authState = ref.watch(authNotifierProvider);
@@ -84,9 +108,26 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                   .read(authNotifierProvider.notifier)
                                   .login(email: email, password: password);
                             },
+                            onForgotPasswordPressed: () {
+                              ref
+                                  .read(registerNotifierProvider.notifier)
+                                  .reset();
+                              ref
+                                  .read(forgotPasswordNotifierProvider.notifier)
+                                  .reset();
+                              ref
+                                  .read(authNotifierProvider.notifier)
+                                  .clearError();
+                              setState(
+                                () => _mode = AuthFormMode.forgotPassword,
+                              );
+                            },
                             onRegisterPressed: () {
                               ref
                                   .read(registerNotifierProvider.notifier)
+                                  .reset();
+                              ref
+                                  .read(forgotPasswordNotifierProvider.notifier)
                                   .reset();
                               setState(() => _mode = AuthFormMode.register);
                               ref
@@ -94,8 +135,20 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                   .clearError();
                             },
                           )
-                        else
+                        else if (_mode == AuthFormMode.register)
                           RegisterForm(
+                            onBackToLoginPressed: () {
+                              setState(() => _mode = AuthFormMode.login);
+                              ref
+                                  .read(forgotPasswordNotifierProvider.notifier)
+                                  .reset();
+                              ref
+                                  .read(authNotifierProvider.notifier)
+                                  .clearError();
+                            },
+                          )
+                        else
+                          ForgotPasswordForm(
                             onBackToLoginPressed: () {
                               setState(() => _mode = AuthFormMode.login);
                               ref

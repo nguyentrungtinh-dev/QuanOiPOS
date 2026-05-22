@@ -3,7 +3,9 @@ import '../../../../core/storage/session_snapshot_storage.dart';
 import '../../domain/entities/login_result.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_data_source.dart';
+import '../models/confirm_forgot_password_request_model.dart';
 import '../models/confirm_registration_request_model.dart';
+import '../models/forgot_password_request_model.dart';
 import '../models/login_request_model.dart';
 import '../models/register_request_model.dart';
 import '../models/session_snapshot_model.dart';
@@ -69,6 +71,28 @@ class AuthRepositoryImpl implements AuthRepository {
   }) {
     return _remoteDataSource.confirmRegistration(
       ConfirmRegistrationRequestModel(email: email, otpCode: otpCode),
+    );
+  }
+
+  @override
+  Future<void> forgotPassword({required String email}) {
+    return _remoteDataSource.forgotPassword(
+      ForgotPasswordRequestModel(email: email),
+    );
+  }
+
+  @override
+  Future<void> confirmForgotPassword({
+    required String email,
+    required String otpCode,
+    required String newPassword,
+  }) {
+    return _remoteDataSource.confirmForgotPassword(
+      ConfirmForgotPasswordRequestModel(
+        email: email,
+        otpCode: otpCode,
+        newPassword: newPassword,
+      ),
     );
   }
 

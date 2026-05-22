@@ -1,5 +1,7 @@
 import '../../../../core/network/dio/dio_client.dart';
+import '../models/confirm_forgot_password_request_model.dart';
 import '../models/confirm_registration_request_model.dart';
+import '../models/forgot_password_request_model.dart';
 import '../models/login_request_model.dart';
 import '../models/login_response_data_model.dart';
 import '../models/register_request_model.dart';
@@ -53,6 +55,36 @@ class AuthRemoteDataSource {
       response.message,
       response.errors,
       'Registration confirmation failed',
+    );
+  }
+
+  Future<void> forgotPassword(ForgotPasswordRequestModel request) async {
+    final response = await _dioClient.postResponse<Object?>(
+      '/auth/forgot-password',
+      data: request.toJson(),
+    );
+
+    _throwIfFailed(
+      response.succeeded,
+      response.message,
+      response.errors,
+      'Forgot password request failed',
+    );
+  }
+
+  Future<void> confirmForgotPassword(
+    ConfirmForgotPasswordRequestModel request,
+  ) async {
+    final response = await _dioClient.postResponse<Object?>(
+      '/auth/forgot-password/confirm',
+      data: request.toJson(),
+    );
+
+    _throwIfFailed(
+      response.succeeded,
+      response.message,
+      response.errors,
+      'Forgot password confirmation failed',
     );
   }
 

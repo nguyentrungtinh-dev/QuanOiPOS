@@ -91,6 +91,20 @@ class _FakeRegisterRepository implements AuthRepository {
   }) async {}
 
   @override
+  Future<void> forgotPassword({required String email}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> confirmForgotPassword({
+    required String email,
+    required String otpCode,
+    required String newPassword,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<LoginResult> login({required String email, required String password}) {
     throw UnimplementedError();
   }

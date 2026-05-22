@@ -14,6 +14,14 @@ abstract class AuthRepository {
     required String otpCode,
   });
 
+  Future<void> forgotPassword({required String email});
+
+  Future<void> confirmForgotPassword({
+    required String email,
+    required String otpCode,
+    required String newPassword,
+  });
+
   Future<void> logout();
 
   Future<LoginResult?> restoreSession();
