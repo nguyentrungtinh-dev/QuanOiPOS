@@ -85,7 +85,10 @@ class _SubscriptionContent extends StatelessWidget {
           else
             SizedBox(
               height: 560,
-              child: _SubscriptionPlanCarousel(plans: state.plans),
+              child: _SubscriptionPlanCarousel(
+                plans: state.plans,
+                activeSubscription: state.activeSubscription,
+              ),
             ),
         ],
       ),
@@ -324,8 +327,12 @@ class _ActiveSubscriptionCard extends StatelessWidget {
 
 class _SubscriptionPlanCarousel extends StatefulWidget {
   final List<ServicePackage> plans;
+  final ActiveSubscription? activeSubscription;
 
-  const _SubscriptionPlanCarousel({required this.plans});
+  const _SubscriptionPlanCarousel({
+    required this.plans,
+    required this.activeSubscription,
+  });
 
   @override
   State<_SubscriptionPlanCarousel> createState() =>
@@ -374,7 +381,10 @@ class _SubscriptionPlanCarouselState extends State<_SubscriptionPlanCarousel> {
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppConstants.spacingXs,
                 ),
-                child: _ServicePackageCard(package: widget.plans[index]),
+                child: _ServicePackageCard(
+                  package: widget.plans[index],
+                  activeSubscription: widget.activeSubscription,
+                ),
               );
             },
           ),
@@ -424,8 +434,12 @@ class _CarouselIndicator extends StatelessWidget {
 
 class _ServicePackageCard extends StatefulWidget {
   final ServicePackage package;
+  final ActiveSubscription? activeSubscription;
 
-  const _ServicePackageCard({required this.package});
+  const _ServicePackageCard({
+    required this.package,
+    required this.activeSubscription,
+  });
 
   @override
   State<_ServicePackageCard> createState() => _ServicePackageCardState();
@@ -437,6 +451,10 @@ class _ServicePackageCardState extends State<_ServicePackageCard> {
   bool _showAllFeatures = false;
 
   ServicePackage get package => widget.package;
+
+  bool get isCurrentPlan {
+    return widget.activeSubscription?.planId.toString() == package.id;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -562,15 +580,25 @@ class _ServicePackageCardState extends State<_ServicePackageCard> {
                 ),
             ],
             const SizedBox(height: AppConstants.spacingLg),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: package.isActive
-                    ? () => _showComingSoon(context)
-                    : null,
-                child: const Text('MUA GÓI'),
+            if (isCurrentPlan)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: null,
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('Gói hiện tại'),
+                ),
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: package.isActive
+                      ? () => _showComingSoon(context)
+                      : null,
+                  child: const Text('MUA GÓI'),
+                ),
               ),
-            ),
           ],
         ),
       ),

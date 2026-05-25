@@ -100,6 +100,8 @@ void main() {
       find.byKey(const Key('subscription_plan_page_view')),
       findsOneWidget,
     );
+    expect(find.text('Gói hiện tại'), findsOneWidget);
+    expect(find.text('MUA GÓI'), findsNothing);
   });
 
   testWidgets('SystemAdmin is redirected away from subscription route', (
