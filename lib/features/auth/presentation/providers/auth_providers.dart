@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/di/injection.dart';
+import '../../../../core/session/session_invalidator.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/login_use_case.dart';
@@ -23,6 +24,10 @@ final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return locator<AuthRepository>();
+});
+
+final sessionInvalidatorProvider = Provider<SessionInvalidator>((ref) {
+  return locator<SessionInvalidator>();
 });
 
 final loginUseCaseProvider = Provider<LoginUseCase>((ref) {

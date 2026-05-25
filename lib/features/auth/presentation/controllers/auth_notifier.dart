@@ -10,9 +10,16 @@ class AuthNotifier extends Notifier<AuthState> {
   static const _sessionRestoreTimeout = Duration(seconds: 8);
 
   bool _bootstrapStarted = false;
+  bool _sessionInvalidationStarted = false;
 
   @override
   AuthState build() {
+    final sessionInvalidator = ref.read(sessionInvalidatorProvider);
+    final subscription = sessionInvalidator.stream.listen((_) {
+      unawaited(_handleSessionInvalidated());
+    });
+    ref.onDispose(subscription.cancel);
+
     Future.microtask(initializeSession);
     return const AuthState.bootstrapping();
   }
@@ -73,6 +80,23 @@ class AuthNotifier extends Notifier<AuthState> {
     final logoutUseCase = ref.read(logoutUseCaseProvider);
     await logoutUseCase();
     state = const AuthState.unauthenticated();
+  }
+
+  Future<void> _handleSessionInvalidated() async {
+    if (_sessionInvalidationStarted ||
+        state.status == AuthStatus.unauthenticated) {
+      return;
+    }
+
+    _sessionInvalidationStarted = true;
+
+    try {
+      final logoutUseCase = ref.read(logoutUseCaseProvider);
+      await logoutUseCase();
+    } finally {
+      _sessionInvalidationStarted = false;
+      state = const AuthState.unauthenticated();
+    }
   }
 
   void clearError() {

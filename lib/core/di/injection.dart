@@ -8,6 +8,7 @@ import '../storage/session_snapshot_storage.dart';
 import '../storage/session_snapshot_storage_impl.dart';
 import '../network/dio/dio_factory.dart';
 import '../network/dio/dio_client.dart';
+import '../session/session_invalidator.dart';
 import 'package:dio/dio.dart';
 import '../../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
@@ -47,9 +48,16 @@ Future<void> setupDependencies({bool enableLogging = false}) async {
   // Logger
   locator.registerLazySingleton<Logger>(() => Logger());
 
+  // Session invalidation
+  locator.registerLazySingleton<SessionInvalidator>(
+    SessionInvalidator.new,
+    dispose: (sessionInvalidator) => sessionInvalidator.dispose(),
+  );
+
   // Dio
   final dio = DioFactory.createDio(
     tokenStorage: locator<TokenStorage>(),
+    sessionInvalidator: locator<SessionInvalidator>(),
     logger: locator<Logger>(),
     enableLogging: enableLogging,
   );

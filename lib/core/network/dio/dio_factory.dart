@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../session/session_invalidator.dart';
 import '../../storage/token_storage.dart';
 import '../../network/interceptors/auth_interceptor.dart';
 import '../../network/interceptors/refresh_token_interceptor.dart';
@@ -9,6 +10,7 @@ import 'package:logger/logger.dart';
 class DioFactory {
   static Dio createDio({
     required TokenStorage tokenStorage,
+    required SessionInvalidator sessionInvalidator,
     required Logger logger,
     required bool enableLogging,
   }) {
@@ -17,7 +19,11 @@ class DioFactory {
     dio.interceptors.addAll([
       createLoggingInterceptor(enabled: enableLogging),
       AuthInterceptor(tokenStorage),
-      RefreshTokenInterceptor(dio: dio, tokenStorage: tokenStorage),
+      RefreshTokenInterceptor(
+        dio: dio,
+        tokenStorage: tokenStorage,
+        sessionInvalidator: sessionInvalidator,
+      ),
     ]);
 
     return dio;
