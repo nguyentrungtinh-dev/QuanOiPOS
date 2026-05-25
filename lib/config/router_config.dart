@@ -7,12 +7,14 @@ import '../features/auth/presentation/pages/auth_page.dart';
 import '../features/auth/presentation/providers/auth_providers.dart';
 import '../features/system_admin/presentation/pages/system_admin_home_page.dart';
 import '../features/store_operations/presentation/pages/store_home_page.dart';
+import '../features/subscription/presentation/pages/store_subscription_page.dart';
 
 /// Route names as constants
 abstract final class RouteNames {
   static const String auth = 'auth';
   static const String systemAdminHome = 'system-admin-home';
   static const String storeHome = 'store-home';
+  static const String storeSubscription = 'store-subscription';
   static const String splash = 'splash';
 }
 
@@ -29,9 +31,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           // Temporary splash while bootstrapping
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         },
       ),
@@ -49,6 +49,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/store-home',
         name: RouteNames.storeHome,
         builder: (context, state) => const StoreHomePage(),
+      ),
+      GoRoute(
+        path: '/store-subscription',
+        name: RouteNames.storeSubscription,
+        builder: (context, state) => const StoreSubscriptionPage(),
       ),
     ],
     redirect: (BuildContext context, GoRouterState state) {
@@ -84,7 +89,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Cross-account type route check
       if (authState.accountType == AccountType.systemAdmin) {
-        if (state.matchedLocation == '/store-home') {
+        if (state.matchedLocation == '/store-home' ||
+            state.matchedLocation == '/store-subscription') {
           return '/system-admin-home';
         }
       } else if (authState.accountType == AccountType.storeUser) {

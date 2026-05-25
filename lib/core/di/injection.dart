@@ -19,6 +19,10 @@ import '../../features/auth/domain/usecases/register_use_case.dart';
 import '../../features/auth/domain/usecases/confirm_registration_use_case.dart';
 import '../../features/auth/domain/usecases/forgot_password_use_case.dart';
 import '../../features/auth/domain/usecases/confirm_forgot_password_use_case.dart';
+import '../../features/subscription/data/datasources/subscription_remote_data_source.dart';
+import '../../features/subscription/data/repositories/subscription_repository_impl.dart';
+import '../../features/subscription/domain/repositories/subscription_repository.dart';
+import '../../features/subscription/domain/usecases/load_subscription_plans_use_case.dart';
 
 final GetIt locator = GetIt.instance;
 
@@ -84,5 +88,16 @@ Future<void> setupDependencies({bool enableLogging = false}) async {
   );
   locator.registerLazySingleton<ConfirmForgotPasswordUseCase>(
     () => ConfirmForgotPasswordUseCase(locator<AuthRepository>()),
+  );
+
+  // Subscription
+  locator.registerLazySingleton<SubscriptionRemoteDataSource>(
+    () => SubscriptionRemoteDataSource(locator<DioClient>()),
+  );
+  locator.registerLazySingleton<SubscriptionRepository>(
+    () => SubscriptionRepositoryImpl(locator<SubscriptionRemoteDataSource>()),
+  );
+  locator.registerLazySingleton<LoadSubscriptionPlansUseCase>(
+    () => LoadSubscriptionPlansUseCase(locator<SubscriptionRepository>()),
   );
 }

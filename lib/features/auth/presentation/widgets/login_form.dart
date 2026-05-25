@@ -104,34 +104,46 @@ class _LoginFormState extends State<LoginForm> {
           ],
           const SizedBox(height: AppConstants.spacingSm),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              TextButton(
-                onPressed: widget.onForgotPasswordPressed,
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 0),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  'Quên mật khẩu?',
-                  style: AppTextStyles.labelSm.copyWith(
-                    color: AppColors.textSecondary,
+              Flexible(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: widget.onForgotPasswordPressed,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Quên mật khẩu?',
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.labelSm.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                   ),
                 ),
               ),
-              TextButton(
-                onPressed: widget.onRegisterPressed,
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 0),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  'Đăng ký ngay',
-                  style: AppTextStyles.labelSm.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
+              const SizedBox(width: AppConstants.spacingSm),
+              Flexible(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: widget.onRegisterPressed,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Đăng ký ngay',
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.labelSm.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
               ),

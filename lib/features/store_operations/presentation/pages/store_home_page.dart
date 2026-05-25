@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../config/router_config.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/index.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
@@ -10,11 +12,7 @@ import '../widgets/logout_action_button.dart';
 import '../widgets/system_shell_scaffold.dart';
 import '../widgets/user_profile_card.dart';
 
-enum _AccountHubState {
-  loading,
-  ready,
-  error,
-}
+enum _AccountHubState { loading, ready, error }
 
 class StoreHomePage extends ConsumerStatefulWidget {
   const StoreHomePage({super.key});
@@ -77,14 +75,18 @@ class _StoreHomePageState extends ConsumerState<StoreHomePage> {
                 padding: const EdgeInsets.all(AppConstants.spacingMd),
                 child: switch (_state) {
                   _AccountHubState.loading => const _LoadingStateView(),
-                  _AccountHubState.error => _ErrorStateView(onRetry: _bootstrapAccountHub),
+                  _AccountHubState.error => _ErrorStateView(
+                    onRetry: _bootstrapAccountHub,
+                  ),
                   _AccountHubState.ready => _ReadyStateView(
-                      fullName: fullName,
-                      email: email,
-                      onStoreTap: () => _onStoreMenuTap(context),
-                      onFeatureTap: (feature) => _showComingSoon(context, feature: feature),
-                      onLogout: () => ref.read(authNotifierProvider.notifier).logout(),
-                    ),
+                    fullName: fullName,
+                    email: email,
+                    onStoreTap: () => _onStoreMenuTap(context),
+                    onFeatureTap: (feature) =>
+                        _showComingSoon(context, feature: feature),
+                    onLogout: () =>
+                        ref.read(authNotifierProvider.notifier).logout(),
+                  ),
                 },
               ),
             ),
@@ -100,18 +102,14 @@ class _LoadingStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(),
-    );
+    return const Center(child: CircularProgressIndicator());
   }
 }
 
 class _ErrorStateView extends StatelessWidget {
   final VoidCallback onRetry;
 
-  const _ErrorStateView({
-    required this.onRetry,
-  });
+  const _ErrorStateView({required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +168,7 @@ class _ReadyStateView extends StatelessWidget {
                 title: 'Gói dịch vụ của tôi',
                 leadingIcon: Icons.inventory_2_outlined,
                 trailingMeta: 'Chưa mua',
-                onTap: () => onFeatureTap('Gói dịch vụ'),
+                onTap: () => context.pushNamed(RouteNames.storeSubscription),
               ),
               AccountMenuItemData(
                 title: 'Cửa hàng',
