@@ -49,10 +49,7 @@ class _StoreHomePageState extends ConsumerState<StoreHomePage> {
   }
 
   void _onStoreMenuTap(BuildContext context) {
-    _showComingSoon(
-      context,
-      feature: 'Luồng chọn cửa hàng/workspace resolution',
-    );
+    context.pushNamed(RouteNames.myStores);
   }
 
   @override

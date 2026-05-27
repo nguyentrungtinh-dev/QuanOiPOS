@@ -25,6 +25,10 @@ import '../../features/subscription/data/repositories/subscription_repository_im
 import '../../features/subscription/domain/repositories/subscription_repository.dart';
 import '../../features/subscription/domain/usecases/load_active_subscription_use_case.dart';
 import '../../features/subscription/domain/usecases/load_subscription_plans_use_case.dart';
+import '../../features/workspace_context/data/datasources/workspace_remote_data_source.dart';
+import '../../features/workspace_context/data/repositories/workspace_repository_impl.dart';
+import '../../features/workspace_context/domain/repositories/workspace_repository.dart';
+import '../../features/workspace_context/domain/usecases/load_my_stores_use_case.dart';
 
 final GetIt locator = GetIt.instance;
 
@@ -111,5 +115,16 @@ Future<void> setupDependencies({bool enableLogging = false}) async {
   );
   locator.registerLazySingleton<LoadActiveSubscriptionUseCase>(
     () => LoadActiveSubscriptionUseCase(locator<SubscriptionRepository>()),
+  );
+
+  // Workspace context
+  locator.registerLazySingleton<WorkspaceRemoteDataSource>(
+    () => WorkspaceRemoteDataSource(locator<DioClient>()),
+  );
+  locator.registerLazySingleton<WorkspaceRepository>(
+    () => WorkspaceRepositoryImpl(locator<WorkspaceRemoteDataSource>()),
+  );
+  locator.registerLazySingleton<LoadMyStoresUseCase>(
+    () => LoadMyStoresUseCase(locator<WorkspaceRepository>()),
   );
 }
