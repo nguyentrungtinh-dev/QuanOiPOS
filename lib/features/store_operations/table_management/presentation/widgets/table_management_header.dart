@@ -2,17 +2,22 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/theme/index.dart';
+import 'table_header_action_menu.dart';
 
 class TableManagementHeader extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onOrdersTap;
-  final VoidCallback onMoreTap;
+  final bool canUseMoreActions;
+  final VoidCallback onEditTap;
+  final VoidCallback onDownloadQrTap;
 
   const TableManagementHeader({
     super.key,
     required this.onBack,
     required this.onOrdersTap,
-    required this.onMoreTap,
+    required this.canUseMoreActions,
+    required this.onEditTap,
+    required this.onDownloadQrTap,
   });
 
   @override
@@ -44,10 +49,10 @@ class TableManagementHeader extends StatelessWidget {
             onTap: onOrdersTap,
           ),
           const SizedBox(width: AppConstants.spacingSm),
-          _HeaderAction(
-            icon: Icons.more_vert_rounded,
-            label: 'Thêm',
-            onTap: onMoreTap,
+          TableHeaderActionMenu(
+            isEnabled: canUseMoreActions,
+            onEditTap: onEditTap,
+            onDownloadQrTap: onDownloadQrTap,
           ),
         ],
       ),

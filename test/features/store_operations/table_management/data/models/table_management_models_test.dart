@@ -106,6 +106,29 @@ void main() {
       expect(table.createdAt, isNotNull);
     });
 
+    test('parses updated table response data', () {
+      final table = DiningTableModel.fromJson({
+        'id': 3,
+        'storeId': 5,
+        'areaId': 7,
+        'name': 'Bàn 3',
+        'capacity': 2,
+        'status': 'Reserved',
+        'createdAt': '2026-05-29T02:18:52.976458Z',
+        'createdBy': null,
+        'updatedAt': '2026-05-29T09:28:47.419767Z',
+        'updatedBy': null,
+        'isDeleted': false,
+      });
+
+      expect(table.id, 3);
+      expect(table.areaId, 7);
+      expect(table.name, 'Bàn 3');
+      expect(table.capacity, 2);
+      expect(table.status, TableStatus.reserved);
+      expect(table.updatedAt, isNotNull);
+    });
+
     test('maps known and unknown statuses', () {
       expect(
         DiningTableModel.statusFromJson('Available'),
@@ -127,6 +150,14 @@ void main() {
           capacity: 4,
         ).toJson(),
         {'storeId': 5, 'areaId': 6, 'name': 'Bàn 3', 'capacity': 4},
+      );
+      expect(
+        const UpdateTableRequestModel(
+          areaId: 7,
+          name: 'Bàn 3',
+          capacity: 2,
+        ).toJson(),
+        {'areaId': 7, 'name': 'Bàn 3', 'capacity': 2},
       );
     });
   });

@@ -91,9 +91,11 @@ class _AccessReadyView extends ConsumerWidget {
       canUpdateArea: accessState.can(AppPermissionCodes.areaUpdate),
       canDeleteArea: accessState.can(AppPermissionCodes.areaDelete),
       canCreateTable: accessState.can(AppPermissionCodes.tableCreate),
+      canUpdateTable: accessState.can(AppPermissionCodes.tableUpdate),
     );
     final state = ref.watch(tableManagementNotifierProvider(access));
     final notifier = ref.read(tableManagementNotifierProvider(access).notifier);
+    final canUseTableMoreActions = _canUseTableMoreActions(accessState);
 
     return Column(
       children: [
@@ -103,7 +105,12 @@ class _AccessReadyView extends ConsumerWidget {
             pathParameters: {'storeId': storeId.toString()},
           ),
           onOrdersTap: () => _showComingSoon(context, 'Đơn hàng'),
-          onMoreTap: () => _showComingSoon(context, 'Thêm'),
+          canUseMoreActions: canUseTableMoreActions,
+          onEditTap: () => context.goNamed(
+            RouteNames.storeTableSettings,
+            pathParameters: {'storeId': storeId.toString()},
+          ),
+          onDownloadQrTap: () => _showComingSoon(context, 'Tải QR bàn'),
         ),
         TableStatusTabs(
           selectedFilter: state.statusFilter,
@@ -143,6 +150,19 @@ class _AccessReadyView extends ConsumerWidget {
       ],
     );
   }
+}
+
+bool _canUseTableMoreActions(StoreAccessState accessState) {
+  final areaCrud =
+      accessState.can(AppPermissionCodes.areaCreate) ||
+      accessState.can(AppPermissionCodes.areaUpdate) ||
+      accessState.can(AppPermissionCodes.areaDelete);
+  final tableCrud =
+      accessState.can(AppPermissionCodes.tableCreate) ||
+      accessState.can(AppPermissionCodes.tableUpdate) ||
+      accessState.can(AppPermissionCodes.tableDelete);
+
+  return areaCrud && tableCrud;
 }
 
 class _ReadyContent extends StatelessWidget {
@@ -414,10 +434,11 @@ Future<void> _showTableForm(
     backgroundColor: Colors.transparent,
     builder: (context) {
       return TableFormBottomSheet(
-        area: area,
-        onSubmit: (name, capacity) {
+        areas: [area],
+        initialArea: area,
+        onSubmit: (selectedArea, name, capacity) {
           return notifier.createTable(
-            areaId: area.id,
+            areaId: selectedArea.id,
             name: name,
             capacity: capacity,
           );

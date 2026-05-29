@@ -23,6 +23,13 @@ abstract class TableManagementRepository {
     required int capacity,
   });
 
+  Future<DiningTable> updateTable({
+    required int tableId,
+    required int areaId,
+    required String name,
+    required int capacity,
+  });
+
   Future<Area> updateArea({
     required int areaId,
     required String name,

@@ -96,6 +96,23 @@ class TableManagementNotifier
     await load();
   }
 
+  Future<void> updateTable({
+    required int tableId,
+    required int areaId,
+    required String name,
+    required int capacity,
+  }) async {
+    _ensureAllowed(_access.canUpdateTable, 'Bạn chưa có quyền cập nhật bàn');
+
+    await ref.read(updateTableUseCaseProvider)(
+      tableId: tableId,
+      areaId: areaId,
+      name: name,
+      capacity: capacity,
+    );
+    await load();
+  }
+
   Future<void> updateArea({
     required int areaId,
     required String name,

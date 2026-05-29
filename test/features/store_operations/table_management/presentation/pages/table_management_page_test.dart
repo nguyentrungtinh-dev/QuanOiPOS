@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:quan_oi/core/theme/index.dart';
 import 'package:quan_oi/features/store_operations/table_management/domain/entities/area.dart';
 import 'package:quan_oi/features/store_operations/table_management/domain/entities/dining_table.dart';
@@ -14,7 +15,9 @@ import 'package:quan_oi/features/store_operations/table_management/domain/usecas
 import 'package:quan_oi/features/store_operations/table_management/domain/usecases/load_table_groups_use_case.dart';
 import 'package:quan_oi/features/store_operations/table_management/domain/usecases/update_area_display_order_use_case.dart';
 import 'package:quan_oi/features/store_operations/table_management/domain/usecases/update_area_use_case.dart';
+import 'package:quan_oi/features/store_operations/table_management/domain/usecases/update_table_use_case.dart';
 import 'package:quan_oi/features/store_operations/table_management/presentation/pages/table_management_page.dart';
+import 'package:quan_oi/features/store_operations/table_management/presentation/pages/table_settings_page.dart';
 import 'package:quan_oi/features/store_operations/table_management/presentation/providers/table_management_providers.dart';
 import 'package:quan_oi/features/store_operations/table_management/presentation/widgets/add_table_tile.dart';
 import 'package:quan_oi/features/workspace_context/domain/entities/store.dart';
@@ -106,6 +109,288 @@ void main() {
     expect(tableRepository.lastAreaId, 7);
     expect(find.text('Bàn 3'), findsOneWidget);
     expect(find.text('Bàn 1'), findsNothing);
+  });
+
+  testWidgets('more menu opens when user has area and table CRUD permissions', (
+    tester,
+  ) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 3, code: 'AREA.CREATE'),
+        StorePermission(permissionId: 4, code: 'TABLE.UPDATE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('table_header_more_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('table_header_edit_action')), findsOneWidget);
+    expect(
+      find.byKey(const Key('table_header_download_qr_action')),
+      findsOneWidget,
+    );
+    expect(find.text('Sửa'), findsOneWidget);
+    expect(find.text('Tải QR bàn'), findsOneWidget);
+  });
+
+  testWidgets(
+    'more menu stays closed without area and table CRUD permissions',
+    (tester) async {
+      final tableRepository = _FakeTableManagementRepository();
+
+      await _pumpPage(
+        tester,
+        permissions: const [
+          StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+          StorePermission(permissionId: 3, code: 'TABLE.UPDATE'),
+        ],
+        tableRepository: tableRepository,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('table_header_more_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('table_header_edit_action')), findsNothing);
+      expect(
+        find.byKey(const Key('table_header_download_qr_action')),
+        findsNothing,
+      );
+      expect(find.text('Sửa'), findsNothing);
+      expect(find.text('Tải QR bàn'), findsNothing);
+    },
+  );
+
+  testWidgets('download qr menu action shows placeholder feedback', (
+    tester,
+  ) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 3, code: 'AREA.UPDATE'),
+        StorePermission(permissionId: 4, code: 'TABLE.DELETE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('table_header_more_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tải QR bàn'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tải QR bàn sẽ được triển khai sau'), findsOneWidget);
+    expect(
+      find.byKey(const Key('table_header_download_qr_action')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('more menu edit navigates to table settings page', (
+    tester,
+  ) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpRoutedPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 3, code: 'AREA.UPDATE'),
+        StorePermission(permissionId: 4, code: 'TABLE.VIEW'),
+        StorePermission(permissionId: 5, code: 'TABLE.UPDATE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('table_header_more_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sửa'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cài đặt bàn'), findsOneWidget);
+    expect(find.byKey(const Key('settings_edit_table_3')), findsOneWidget);
+  });
+
+  testWidgets('settings page renders edit actions by PBAC', (tester) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpSettingsPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 3, code: 'TABLE.VIEW'),
+        StorePermission(permissionId: 4, code: 'AREA.UPDATE'),
+        StorePermission(permissionId: 5, code: 'TABLE.UPDATE'),
+        StorePermission(permissionId: 6, code: 'TABLE.CREATE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cài đặt bàn'), findsOneWidget);
+    expect(find.byKey(const Key('settings_edit_area_6')), findsOneWidget);
+    expect(find.byKey(const Key('settings_edit_table_3')), findsOneWidget);
+    expect(find.byKey(const Key('settings_add_table_fab')), findsOneWidget);
+
+    final tableEditButton = tester.widget<IconButton>(
+      find.byKey(const Key('settings_edit_table_3')),
+    );
+    expect(tableEditButton.onPressed, isNotNull);
+  });
+
+  testWidgets('settings page blocks table edit without TABLE.UPDATE', (
+    tester,
+  ) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpSettingsPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 3, code: 'TABLE.VIEW'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    final tableEditButton = tester.widget<IconButton>(
+      find.byKey(const Key('settings_edit_table_3')),
+    );
+    expect(tableEditButton.onPressed, isNull);
+
+    await tester.tap(find.byKey(const Key('settings_edit_table_3')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('table_form_submit_button')), findsNothing);
+  });
+
+  testWidgets('settings table edit sheet updates table and reloads data', (
+    tester,
+  ) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpSettingsPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 3, code: 'TABLE.VIEW'),
+        StorePermission(permissionId: 4, code: 'TABLE.UPDATE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    final initialLoadCount = tableRepository.loadTableGroupsCallCount;
+
+    await tester.tap(find.byKey(const Key('settings_edit_table_3')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bàn tại "Bên trong"'), findsOneWidget);
+    expect(find.byKey(const Key('table_form_delete_button')), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('table_form_name_field')),
+      'Bàn 10',
+    );
+    await tester.enterText(
+      find.byKey(const Key('table_form_capacity_field')),
+      '8',
+    );
+    await tester.tap(find.byKey(const Key('table_form_submit_button')));
+    await tester.pumpAndSettle();
+
+    expect(tableRepository.updateTableCallCount, 1);
+    expect(tableRepository.lastUpdatedTableId, 3);
+    expect(tableRepository.lastUpdatedTableAreaId, 6);
+    expect(tableRepository.lastUpdatedTableName, 'Bàn 10');
+    expect(tableRepository.lastUpdatedTableCapacity, 8);
+    expect(
+      tableRepository.loadTableGroupsCallCount,
+      greaterThan(initialLoadCount),
+    );
+    expect(find.text('Cập nhật thông tin bàn thành công!'), findsOneWidget);
+  });
+
+  testWidgets('settings add fab uses area selector from all filter', (
+    tester,
+  ) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpSettingsPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 3, code: 'TABLE.VIEW'),
+        StorePermission(permissionId: 4, code: 'TABLE.CREATE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('settings_add_table_fab')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('table_form_area_select_field')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('table_form_area_field')), findsNothing);
+  });
+
+  testWidgets('settings add fab prefills selected area', (tester) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpSettingsPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 3, code: 'TABLE.VIEW'),
+        StorePermission(permissionId: 4, code: 'TABLE.CREATE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Sân vườn'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_add_table_fab')));
+    await tester.pumpAndSettle();
+
+    final areaField = tester.widget<TextFormField>(
+      find.byKey(const Key('table_form_area_field')),
+    );
+    expect(areaField.initialValue, 'Sân vườn');
+  });
+
+  testWidgets('settings add fab is disabled without TABLE.CREATE', (
+    tester,
+  ) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpSettingsPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 3, code: 'TABLE.VIEW'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    final addButton = tester.widget<ElevatedButton>(
+      find.byKey(const Key('settings_add_table_fab')),
+    );
+    expect(addButton.onPressed, isNull);
   });
 
   testWidgets(
@@ -443,6 +728,9 @@ Future<void> _pumpPage(
         updateAreaUseCaseProvider.overrideWithValue(
           UpdateAreaUseCase(tableRepository),
         ),
+        updateTableUseCaseProvider.overrideWithValue(
+          UpdateTableUseCase(tableRepository),
+        ),
         updateAreaDisplayOrderUseCaseProvider.overrideWithValue(
           UpdateAreaDisplayOrderUseCase(tableRepository),
         ),
@@ -456,6 +744,92 @@ Future<void> _pumpPage(
       ),
     ),
   );
+}
+
+Future<void> _pumpSettingsPage(
+  WidgetTester tester, {
+  required List<StorePermission> permissions,
+  required _FakeTableManagementRepository tableRepository,
+}) async {
+  final workspaceRepository = _FakeWorkspaceRepository(permissions);
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: _overrides(workspaceRepository, tableRepository),
+      child: MaterialApp(
+        theme: AppTheme.light,
+        home: const TableSettingsPage(storeId: 5),
+      ),
+    ),
+  );
+}
+
+Future<void> _pumpRoutedPage(
+  WidgetTester tester, {
+  required List<StorePermission> permissions,
+  required _FakeTableManagementRepository tableRepository,
+}) async {
+  final workspaceRepository = _FakeWorkspaceRepository(permissions);
+  final router = GoRouter(
+    initialLocation: '/stores/5/tables',
+    routes: [
+      GoRoute(
+        path: '/stores/:storeId/tables',
+        name: 'store-table-management',
+        builder: (context, state) => const TableManagementPage(storeId: 5),
+      ),
+      GoRoute(
+        path: '/stores/:storeId/tables/settings',
+        name: 'store-table-settings',
+        builder: (context, state) => const TableSettingsPage(storeId: 5),
+      ),
+    ],
+  );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: _overrides(workspaceRepository, tableRepository),
+      child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+    ),
+  );
+}
+
+List<Override> _overrides(
+  _FakeWorkspaceRepository workspaceRepository,
+  _FakeTableManagementRepository tableRepository,
+) {
+  return [
+    loadStoreAccessContextUseCaseProvider.overrideWithValue(
+      LoadStoreAccessContextUseCase(workspaceRepository),
+    ),
+    loadMyStoresUseCaseProvider.overrideWithValue(
+      LoadMyStoresUseCase(workspaceRepository),
+    ),
+    loadAreasUseCaseProvider.overrideWithValue(
+      LoadAreasUseCase(tableRepository),
+    ),
+    loadTableGroupsUseCaseProvider.overrideWithValue(
+      LoadTableGroupsUseCase(tableRepository),
+    ),
+    createAreaUseCaseProvider.overrideWithValue(
+      CreateAreaUseCase(tableRepository),
+    ),
+    createTableUseCaseProvider.overrideWithValue(
+      CreateTableUseCase(tableRepository),
+    ),
+    updateAreaUseCaseProvider.overrideWithValue(
+      UpdateAreaUseCase(tableRepository),
+    ),
+    updateTableUseCaseProvider.overrideWithValue(
+      UpdateTableUseCase(tableRepository),
+    ),
+    updateAreaDisplayOrderUseCaseProvider.overrideWithValue(
+      UpdateAreaDisplayOrderUseCase(tableRepository),
+    ),
+    deleteAreaUseCaseProvider.overrideWithValue(
+      DeleteAreaUseCase(tableRepository),
+    ),
+  ];
 }
 
 class _FakeWorkspaceRepository implements WorkspaceRepository {
@@ -493,6 +867,7 @@ class _FakeTableManagementRepository implements TableManagementRepository {
   int createAreaCallCount = 0;
   int createTableCallCount = 0;
   int updateAreaCallCount = 0;
+  int updateTableCallCount = 0;
   int updateAreaDisplayOrderCallCount = 0;
   int deleteAreaCallCount = 0;
   int? lastAreaId;
@@ -500,6 +875,10 @@ class _FakeTableManagementRepository implements TableManagementRepository {
   int? lastCreatedTableAreaId;
   String? lastCreatedTableName;
   int? lastCreatedTableCapacity;
+  int? lastUpdatedTableId;
+  int? lastUpdatedTableAreaId;
+  String? lastUpdatedTableName;
+  int? lastUpdatedTableCapacity;
 
   @override
   Future<List<Area>> loadAreas(int storeId) async {
@@ -556,6 +935,30 @@ class _FakeTableManagementRepository implements TableManagementRepository {
     return DiningTable(
       id: 99,
       storeId: storeId,
+      areaId: areaId,
+      name: name,
+      capacity: capacity,
+      status: TableStatus.available,
+      isDeleted: false,
+    );
+  }
+
+  @override
+  Future<DiningTable> updateTable({
+    required int tableId,
+    required int areaId,
+    required String name,
+    required int capacity,
+  }) async {
+    updateTableCallCount += 1;
+    lastUpdatedTableId = tableId;
+    lastUpdatedTableAreaId = areaId;
+    lastUpdatedTableName = name;
+    lastUpdatedTableCapacity = capacity;
+
+    return DiningTable(
+      id: tableId,
+      storeId: 5,
       areaId: areaId,
       name: name,
       capacity: capacity,

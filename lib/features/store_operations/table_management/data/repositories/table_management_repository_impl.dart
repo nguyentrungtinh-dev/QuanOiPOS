@@ -102,6 +102,25 @@ class TableManagementRepositoryImpl implements TableManagementRepository {
   }
 
   @override
+  Future<DiningTable> updateTable({
+    required int tableId,
+    required int areaId,
+    required String name,
+    required int capacity,
+  }) async {
+    final table = await _remoteDataSource.updateTable(
+      tableId: tableId,
+      request: UpdateTableRequestModel(
+        areaId: areaId,
+        name: name,
+        capacity: capacity,
+      ),
+    );
+
+    return table.toEntity();
+  }
+
+  @override
   Future<Area> updateArea({
     required int areaId,
     required String name,

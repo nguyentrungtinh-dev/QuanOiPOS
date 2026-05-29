@@ -84,6 +84,27 @@ class TableManagementRemoteDataSource {
     return response.data!;
   }
 
+  Future<DiningTableModel> updateTable({
+    required int tableId,
+    required UpdateTableRequestModel request,
+  }) async {
+    final response = await _dioClient.putResponse<DiningTableModel>(
+      '/tables/$tableId',
+      data: request.toJson(),
+      dataFromJson: DiningTableModel.fromJson,
+    );
+
+    if (!response.succeeded || response.data == null) {
+      _throwRequestFailure(
+        response.message,
+        response.errors,
+        'Không thể cập nhật bàn',
+      );
+    }
+
+    return response.data!;
+  }
+
   Future<AreaModel> updateArea({
     required int areaId,
     required UpdateAreaRequestModel request,

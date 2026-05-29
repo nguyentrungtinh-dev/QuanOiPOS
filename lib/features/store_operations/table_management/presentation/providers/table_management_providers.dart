@@ -10,6 +10,7 @@ import '../../domain/usecases/load_areas_use_case.dart';
 import '../../domain/usecases/load_table_groups_use_case.dart';
 import '../../domain/usecases/update_area_display_order_use_case.dart';
 import '../../domain/usecases/update_area_use_case.dart';
+import '../../domain/usecases/update_table_use_case.dart';
 import '../controllers/table_management_notifier.dart';
 import '../controllers/table_management_state.dart';
 
@@ -42,6 +43,10 @@ final createTableUseCaseProvider = Provider<CreateTableUseCase>((ref) {
 
 final updateAreaUseCaseProvider = Provider<UpdateAreaUseCase>((ref) {
   return locator<UpdateAreaUseCase>();
+});
+
+final updateTableUseCaseProvider = Provider<UpdateTableUseCase>((ref) {
+  return locator<UpdateTableUseCase>();
 });
 
 final updateAreaDisplayOrderUseCaseProvider =

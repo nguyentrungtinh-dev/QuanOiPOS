@@ -20,3 +20,19 @@ class CreateTableRequestModel {
     };
   }
 }
+
+class UpdateTableRequestModel {
+  final int areaId;
+  final String name;
+  final int capacity;
+
+  const UpdateTableRequestModel({
+    required this.areaId,
+    required this.name,
+    required this.capacity,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {'areaId': areaId, 'name': name, 'capacity': capacity};
+  }
+}
