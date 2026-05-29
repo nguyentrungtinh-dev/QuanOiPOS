@@ -7,8 +7,12 @@ import 'package:quan_oi/features/store_operations/table_management/domain/entiti
 import 'package:quan_oi/features/store_operations/table_management/domain/entities/table_area_group.dart';
 import 'package:quan_oi/features/store_operations/table_management/domain/entities/table_status.dart';
 import 'package:quan_oi/features/store_operations/table_management/domain/repositories/table_management_repository.dart';
+import 'package:quan_oi/features/store_operations/table_management/domain/usecases/create_area_use_case.dart';
+import 'package:quan_oi/features/store_operations/table_management/domain/usecases/delete_area_use_case.dart';
 import 'package:quan_oi/features/store_operations/table_management/domain/usecases/load_areas_use_case.dart';
 import 'package:quan_oi/features/store_operations/table_management/domain/usecases/load_table_groups_use_case.dart';
+import 'package:quan_oi/features/store_operations/table_management/domain/usecases/update_area_display_order_use_case.dart';
+import 'package:quan_oi/features/store_operations/table_management/domain/usecases/update_area_use_case.dart';
 import 'package:quan_oi/features/store_operations/table_management/presentation/pages/table_management_page.dart';
 import 'package:quan_oi/features/store_operations/table_management/presentation/providers/table_management_providers.dart';
 import 'package:quan_oi/features/workspace_context/domain/entities/store.dart';
@@ -101,6 +105,199 @@ void main() {
     expect(find.text('Bàn 3'), findsOneWidget);
     expect(find.text('Bàn 1'), findsNothing);
   });
+
+  testWidgets(
+    'area row uses separate management button and all chip has no icon',
+    (tester) async {
+      final tableRepository = _FakeTableManagementRepository();
+
+      await _pumpPage(
+        tester,
+        permissions: const [
+          StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        ],
+        tableRepository: tableRepository,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('manage_areas_button')), findsOneWidget);
+      expect(find.byKey(const Key('area_chips_scroll_view')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('area_chips_scroll_view')),
+          matching: find.byKey(const Key('manage_areas_button')),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.widgetWithText(OutlinedButton, 'Tất cả'),
+          matching: find.byIcon(Icons.grid_view_rounded),
+        ),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets('area management sheet renders reference-like header', (
+    tester,
+  ) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 5, code: 'AREA.CREATE'),
+        StorePermission(permissionId: 6, code: 'AREA.UPDATE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('manage_areas_button')));
+    await tester.pumpAndSettle();
+
+    final sheet = find.byKey(const Key('area_management_sheet'));
+    expect(
+      find.descendant(of: sheet, matching: find.text('Chỉnh sửa')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: sheet, matching: find.text('Khu vực')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: sheet,
+        matching: find.byKey(const Key('close_area_management_button')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: sheet,
+        matching: find.byKey(const Key('area_management_search_field')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: sheet,
+        matching: find.byKey(const Key('add_area_button')),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('area management bottom sheet searches areas', (tester) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpPage(
+      tester,
+      permissions: const [StorePermission(permissionId: 2, code: 'AREA.VIEW')],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('manage_areas_button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('area_management_search_field')),
+      'sân',
+    );
+    await tester.pumpAndSettle();
+
+    final sheet = find.byKey(const Key('area_management_sheet'));
+    expect(
+      find.descendant(of: sheet, matching: find.text('Sân vườn')),
+      findsWidgets,
+    );
+    expect(
+      find.descendant(of: sheet, matching: find.text('Bên trong')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('area action buttons are disabled by PBAC', (tester) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpPage(
+      tester,
+      permissions: const [StorePermission(permissionId: 2, code: 'AREA.VIEW')],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('manage_areas_button')));
+    await tester.pumpAndSettle();
+
+    final addButton = tester.widget<IconButton>(
+      find.byKey(const Key('add_area_button')),
+    );
+    final editButton = tester.widget<TextButton>(
+      find.byKey(const Key('edit_areas_button')),
+    );
+
+    expect(addButton.onPressed, isNull);
+    expect(editButton.onPressed, isNull);
+  });
+
+  testWidgets('area form validates required name', (tester) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 5, code: 'AREA.CREATE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('manage_areas_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add_area_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('area_form_submit_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vui lòng nhập tên khu vực'), findsOneWidget);
+    expect(tableRepository.createAreaCallCount, 0);
+  });
+
+  testWidgets('creating area calls API and reloads data', (tester) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 5, code: 'AREA.CREATE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('manage_areas_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add_area_button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('area_form_name_field')),
+      'Phòng VIP',
+    );
+    await tester.enterText(
+      find.byKey(const Key('area_form_description_field')),
+      'Khu vực riêng',
+    );
+    await tester.tap(find.byKey(const Key('area_form_submit_button')));
+    await tester.pumpAndSettle();
+
+    expect(tableRepository.createAreaCallCount, 1);
+    expect(tableRepository.loadAreasCallCount, greaterThan(1));
+  });
 }
 
 Future<void> _pumpPage(
@@ -124,6 +321,18 @@ Future<void> _pumpPage(
         ),
         loadTableGroupsUseCaseProvider.overrideWithValue(
           LoadTableGroupsUseCase(tableRepository),
+        ),
+        createAreaUseCaseProvider.overrideWithValue(
+          CreateAreaUseCase(tableRepository),
+        ),
+        updateAreaUseCaseProvider.overrideWithValue(
+          UpdateAreaUseCase(tableRepository),
+        ),
+        updateAreaDisplayOrderUseCaseProvider.overrideWithValue(
+          UpdateAreaDisplayOrderUseCase(tableRepository),
+        ),
+        deleteAreaUseCaseProvider.overrideWithValue(
+          DeleteAreaUseCase(tableRepository),
         ),
       ],
       child: MaterialApp(
@@ -166,6 +375,10 @@ class _FakeWorkspaceRepository implements WorkspaceRepository {
 class _FakeTableManagementRepository implements TableManagementRepository {
   int loadAreasCallCount = 0;
   int loadTableGroupsCallCount = 0;
+  int createAreaCallCount = 0;
+  int updateAreaCallCount = 0;
+  int updateAreaDisplayOrderCallCount = 0;
+  int deleteAreaCallCount = 0;
   int? lastAreaId;
 
   @override
@@ -187,6 +400,58 @@ class _FakeTableManagementRepository implements TableManagementRepository {
     }
 
     return _tableGroups.where((group) => group.area.id == areaId).toList();
+  }
+
+  @override
+  Future<Area> createArea({
+    required int storeId,
+    required String name,
+    required String description,
+  }) async {
+    createAreaCallCount += 1;
+    return Area(
+      id: 99,
+      storeId: storeId,
+      name: name,
+      description: description,
+      displayOrder: 3,
+      isActive: true,
+      isDeleted: false,
+    );
+  }
+
+  @override
+  Future<Area> updateArea({
+    required int areaId,
+    required String name,
+    required String description,
+  }) async {
+    updateAreaCallCount += 1;
+    return Area(
+      id: areaId,
+      storeId: 5,
+      name: name,
+      description: description,
+      displayOrder: 1,
+      isActive: true,
+      isDeleted: false,
+    );
+  }
+
+  @override
+  Future<Area> updateAreaDisplayOrder({
+    required int areaId,
+    required int displayOrder,
+  }) async {
+    updateAreaDisplayOrderCallCount += 1;
+    return _areas
+        .firstWhere((area) => area.id == areaId)
+        .copyWithDisplayOrder(displayOrder);
+  }
+
+  @override
+  Future<void> deleteArea(int areaId) async {
+    deleteAreaCallCount += 1;
   }
 }
 
@@ -261,3 +526,21 @@ const _tableGroups = [
     ],
   ),
 ];
+
+extension on Area {
+  Area copyWithDisplayOrder(int displayOrder) {
+    return Area(
+      id: id,
+      storeId: storeId,
+      name: name,
+      description: description,
+      displayOrder: displayOrder,
+      isActive: isActive,
+      createdAt: createdAt,
+      createdBy: createdBy,
+      updatedAt: updatedAt,
+      updatedBy: updatedBy,
+      isDeleted: isDeleted,
+    );
+  }
+}

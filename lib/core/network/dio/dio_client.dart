@@ -6,12 +6,23 @@ class DioClient {
 
   DioClient(this.dio);
 
-  Future<Response<T>> get<T>(String path, {Map<String, dynamic>? queryParameters}) {
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
     return dio.get<T>(path, queryParameters: queryParameters);
   }
 
   Future<Response<T>> post<T>(String path, {dynamic data}) {
     return dio.post<T>(path, data: data);
+  }
+
+  Future<Response<T>> put<T>(String path, {dynamic data}) {
+    return dio.put<T>(path, data: data);
+  }
+
+  Future<Response<T>> delete<T>(String path, {dynamic data}) {
+    return dio.delete<T>(path, data: data);
   }
 
   Future<ApiResponse<T>> getResponse<T>(
@@ -20,7 +31,10 @@ class DioClient {
     T Function(Object? json)? dataFromJson,
   }) async {
     try {
-      final response = await dio.get<dynamic>(path, queryParameters: queryParameters);
+      final response = await dio.get<dynamic>(
+        path,
+        queryParameters: queryParameters,
+      );
       return _parseApiResponse<T>(response.data, dataFromJson: dataFromJson);
     } on DioException catch (error) {
       throw Exception(_extractErrorMessage(error));
@@ -34,6 +48,32 @@ class DioClient {
   }) async {
     try {
       final response = await dio.post<dynamic>(path, data: data);
+      return _parseApiResponse<T>(response.data, dataFromJson: dataFromJson);
+    } on DioException catch (error) {
+      throw Exception(_extractErrorMessage(error));
+    }
+  }
+
+  Future<ApiResponse<T>> putResponse<T>(
+    String path, {
+    dynamic data,
+    T Function(Object? json)? dataFromJson,
+  }) async {
+    try {
+      final response = await dio.put<dynamic>(path, data: data);
+      return _parseApiResponse<T>(response.data, dataFromJson: dataFromJson);
+    } on DioException catch (error) {
+      throw Exception(_extractErrorMessage(error));
+    }
+  }
+
+  Future<ApiResponse<T>> deleteResponse<T>(
+    String path, {
+    dynamic data,
+    T Function(Object? json)? dataFromJson,
+  }) async {
+    try {
+      final response = await dio.delete<dynamic>(path, data: data);
       return _parseApiResponse<T>(response.data, dataFromJson: dataFromJson);
     } on DioException catch (error) {
       throw Exception(_extractErrorMessage(error));
@@ -63,7 +103,8 @@ class DioClient {
         return apiResponse.errors.first;
       }
 
-      if (apiResponse.message != null && apiResponse.message!.trim().isNotEmpty) {
+      if (apiResponse.message != null &&
+          apiResponse.message!.trim().isNotEmpty) {
         return apiResponse.message!;
       }
     }

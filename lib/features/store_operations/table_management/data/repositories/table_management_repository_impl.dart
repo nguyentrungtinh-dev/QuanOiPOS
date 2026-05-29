@@ -2,6 +2,7 @@ import '../../domain/entities/area.dart';
 import '../../domain/entities/table_area_group.dart';
 import '../../domain/repositories/table_management_repository.dart';
 import '../datasources/table_management_remote_data_source.dart';
+import '../models/area_request_models.dart';
 
 class TableManagementRepositoryImpl implements TableManagementRepository {
   final TableManagementRemoteDataSource _remoteDataSource;
@@ -60,5 +61,54 @@ class TableManagementRepositoryImpl implements TableManagementRepository {
     });
 
     return entities;
+  }
+
+  @override
+  Future<Area> createArea({
+    required int storeId,
+    required String name,
+    required String description,
+  }) async {
+    final area = await _remoteDataSource.createArea(
+      CreateAreaRequestModel(
+        storeId: storeId,
+        name: name,
+        description: description,
+      ),
+    );
+
+    return area.toEntity();
+  }
+
+  @override
+  Future<Area> updateArea({
+    required int areaId,
+    required String name,
+    required String description,
+  }) async {
+    final area = await _remoteDataSource.updateArea(
+      areaId: areaId,
+      request: UpdateAreaRequestModel(name: name, description: description),
+    );
+
+    return area.toEntity();
+  }
+
+  @override
+  Future<Area> updateAreaDisplayOrder({
+    required int areaId,
+    required int displayOrder,
+  }) async {
+    final area = await _remoteDataSource.updateAreaDisplayOrder(
+      areaId: areaId,
+      request: UpdateAreaDisplayOrderRequestModel(displayOrder: displayOrder),
+    );
+
+    return area.toEntity();
+  }
+
+  @override
+  Future<void> deleteArea(int areaId) {
+    return _remoteDataSource.deleteArea(areaId);
   }
 }

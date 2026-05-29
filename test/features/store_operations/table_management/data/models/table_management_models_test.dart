@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quan_oi/features/store_operations/table_management/data/models/area_model.dart';
+import 'package:quan_oi/features/store_operations/table_management/data/models/area_request_models.dart';
 import 'package:quan_oi/features/store_operations/table_management/data/models/dining_table_model.dart';
 import 'package:quan_oi/features/store_operations/table_management/data/models/table_area_group_model.dart';
 import 'package:quan_oi/features/store_operations/table_management/domain/entities/table_status.dart';
@@ -31,6 +32,51 @@ void main() {
 
     test('returns empty list for null payload', () {
       expect(AreaModel.listFromJson(null), isEmpty);
+    });
+
+    test('parses create and update area response data', () {
+      final area = AreaModel.fromJson({
+        'id': 9,
+        'storeId': 5,
+        'name': 'phòng vip',
+        'description': 'Đây là phòng vip',
+        'displayOrder': 4,
+        'isActive': true,
+        'createdAt': '2026-05-29T05:37:43.018974Z',
+        'createdBy': null,
+        'updatedAt': '2026-05-29T05:40:18.025412Z',
+        'updatedBy': null,
+        'isDeleted': false,
+      });
+
+      expect(area.id, 9);
+      expect(area.name, 'phòng vip');
+      expect(area.displayOrder, 4);
+      expect(area.updatedAt, isNotNull);
+    });
+  });
+
+  group('Area request models', () {
+    test('serializes create/update/display order payloads', () {
+      expect(
+        const CreateAreaRequestModel(
+          storeId: 5,
+          name: 'vip',
+          description: 'đây là phòng vip',
+        ).toJson(),
+        {'storeId': 5, 'name': 'vip', 'description': 'đây là phòng vip'},
+      );
+      expect(
+        const UpdateAreaRequestModel(
+          name: 'phòng vip',
+          description: 'Đây là phòng vip',
+        ).toJson(),
+        {'name': 'phòng vip', 'description': 'Đây là phòng vip'},
+      );
+      expect(
+        const UpdateAreaDisplayOrderRequestModel(displayOrder: 1).toJson(),
+        {'displayOrder': 1},
+      );
     });
   });
 

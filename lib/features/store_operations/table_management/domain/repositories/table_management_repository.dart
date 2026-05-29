@@ -8,4 +8,23 @@ abstract class TableManagementRepository {
     required int storeId,
     int? areaId,
   });
+
+  Future<Area> createArea({
+    required int storeId,
+    required String name,
+    required String description,
+  });
+
+  Future<Area> updateArea({
+    required int areaId,
+    required String name,
+    required String description,
+  });
+
+  Future<Area> updateAreaDisplayOrder({
+    required int areaId,
+    required int displayOrder,
+  });
+
+  Future<void> deleteArea(int areaId);
 }

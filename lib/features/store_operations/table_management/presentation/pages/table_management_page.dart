@@ -13,6 +13,7 @@ import '../../domain/entities/table_area_group.dart';
 import '../controllers/table_management_state.dart';
 import '../providers/table_management_providers.dart';
 import '../widgets/area_filter_chips.dart';
+import '../widgets/area_management_bottom_sheet.dart';
 import '../widgets/area_table_section.dart';
 import '../widgets/quick_action_grid.dart';
 import '../widgets/table_management_header.dart';
@@ -84,6 +85,9 @@ class _AccessReadyView extends ConsumerWidget {
       storeId: storeId,
       canViewAreas: accessState.can(AppPermissionCodes.areaView),
       canViewTables: accessState.can(AppPermissionCodes.tableView),
+      canCreateArea: accessState.can(AppPermissionCodes.areaCreate),
+      canUpdateArea: accessState.can(AppPermissionCodes.areaUpdate),
+      canDeleteArea: accessState.can(AppPermissionCodes.areaDelete),
     );
     final state = ref.watch(tableManagementNotifierProvider(access));
     final notifier = ref.read(tableManagementNotifierProvider(access).notifier);
@@ -126,6 +130,7 @@ class _AccessReadyView extends ConsumerWidget {
             TableManagementStatus.ready => _ReadyContent(
               state: state,
               canCreateTable: accessState.can(AppPermissionCodes.tableCreate),
+              access: access,
               onRefresh: notifier.load,
               onAreaSelected: notifier.selectArea,
               onAddTableTap: () => _showComingSoon(context, 'Thêm bàn mới'),
@@ -141,6 +146,7 @@ class _AccessReadyView extends ConsumerWidget {
 class _ReadyContent extends StatelessWidget {
   final TableManagementState state;
   final bool canCreateTable;
+  final TableManagementAccess access;
   final Future<void> Function() onRefresh;
   final ValueChanged<int?> onAreaSelected;
   final VoidCallback onAddTableTap;
@@ -149,6 +155,7 @@ class _ReadyContent extends StatelessWidget {
   const _ReadyContent({
     required this.state,
     required this.canCreateTable,
+    required this.access,
     required this.onRefresh,
     required this.onAreaSelected,
     required this.onAddTableTap,
@@ -173,6 +180,7 @@ class _ReadyContent extends StatelessWidget {
             areas: state.areas,
             selectedAreaId: state.selectedAreaId,
             onSelected: onAreaSelected,
+            onManageAreasTap: () => _showAreaManagement(context, access),
           ),
           const SizedBox(height: AppConstants.spacingLg),
           QuickActionGrid(
@@ -387,4 +395,22 @@ void _showComingSoon(BuildContext context, String feature) {
   ScaffoldMessenger.of(
     context,
   ).showSnackBar(SnackBar(content: Text('$feature sẽ được triển khai sau')));
+}
+
+Future<void> _showAreaManagement(
+  BuildContext context,
+  TableManagementAccess access,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return FractionallySizedBox(
+        heightFactor: 0.72,
+        child: AreaManagementBottomSheet(access: access),
+      );
+    },
+  );
 }

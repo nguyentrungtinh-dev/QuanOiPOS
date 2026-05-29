@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/entities/area.dart';
 import '../../domain/entities/table_area_group.dart';
 import '../providers/table_management_providers.dart';
 import 'table_management_state.dart';
@@ -65,6 +66,95 @@ class TableManagementNotifier
     }
   }
 
+  Future<void> createArea({
+    required String name,
+    required String description,
+  }) async {
+    _ensureAllowed(_access.canCreateArea, 'Bạn chưa có quyền thêm khu vực');
+
+    await ref.read(createAreaUseCaseProvider)(
+      storeId: _access.storeId,
+      name: name,
+      description: description,
+    );
+    await load();
+  }
+
+  Future<void> updateArea({
+    required int areaId,
+    required String name,
+    required String description,
+  }) async {
+    _ensureAllowed(
+      _access.canUpdateArea,
+      'Bạn chưa có quyền chỉnh sửa khu vực',
+    );
+
+    await ref.read(updateAreaUseCaseProvider)(
+      areaId: areaId,
+      name: name,
+      description: description,
+    );
+    await load();
+  }
+
+  Future<void> deleteArea(int areaId) async {
+    _ensureAllowed(_access.canDeleteArea, 'Bạn chưa có quyền xóa khu vực');
+
+    await ref.read(deleteAreaUseCaseProvider)(areaId);
+    if (state.selectedAreaId == areaId) {
+      state = state.copyWith(clearSelectedArea: true);
+    }
+    await load();
+  }
+
+  Future<void> reorderAreas(List<Area> reorderedAreas) async {
+    _ensureAllowed(
+      _access.canUpdateArea,
+      'Bạn chưa có quyền cập nhật thứ tự khu vực',
+    );
+
+    final oldOrdersById = {
+      for (final area in state.areas) area.id: area.displayOrder,
+    };
+    final normalizedAreas = <Area>[];
+    final changedAreas = <Area>[];
+
+    for (var index = 0; index < reorderedAreas.length; index += 1) {
+      final nextOrder = index + 1;
+      final area = reorderedAreas[index];
+      final normalizedArea = Area(
+        id: area.id,
+        storeId: area.storeId,
+        name: area.name,
+        description: area.description,
+        displayOrder: nextOrder,
+        isActive: area.isActive,
+        createdAt: area.createdAt,
+        createdBy: area.createdBy,
+        updatedAt: area.updatedAt,
+        updatedBy: area.updatedBy,
+        isDeleted: area.isDeleted,
+      );
+      normalizedAreas.add(normalizedArea);
+
+      if (oldOrdersById[area.id] != nextOrder) {
+        changedAreas.add(normalizedArea);
+      }
+    }
+
+    state = state.copyWith(areas: normalizedAreas);
+
+    for (final area in changedAreas) {
+      await ref.read(updateAreaDisplayOrderUseCaseProvider)(
+        areaId: area.id,
+        displayOrder: area.displayOrder,
+      );
+    }
+
+    await load();
+  }
+
   Future<void> selectArea(int? areaId) async {
     if (state.selectedAreaId == areaId) {
       return;
@@ -88,5 +178,11 @@ class TableManagementNotifier
 
   String _cleanError(Object error) {
     return error.toString().replaceFirst('Exception: ', '');
+  }
+
+  void _ensureAllowed(bool isAllowed, String message) {
+    if (!isAllowed) {
+      throw Exception(message);
+    }
   }
 }

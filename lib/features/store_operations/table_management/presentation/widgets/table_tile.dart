@@ -71,7 +71,7 @@ class TableTile extends StatelessWidget {
 
   Color _statusColor(TableStatus status) {
     return switch (status) {
-      TableStatus.available => AppColors.primary,
+      TableStatus.available => AppColors.success,
       TableStatus.occupied => AppColors.warning,
       TableStatus.reserved => AppColors.info,
       TableStatus.unknown => AppColors.textMuted,

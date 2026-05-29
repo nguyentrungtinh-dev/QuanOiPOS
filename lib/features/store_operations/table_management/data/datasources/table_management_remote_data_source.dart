@@ -1,5 +1,6 @@
 import '../../../../../core/network/dio/dio_client.dart';
 import '../models/area_model.dart';
+import '../models/area_request_models.dart';
 import '../models/table_area_group_model.dart';
 
 class TableManagementRemoteDataSource {
@@ -43,6 +44,78 @@ class TableManagementRemoteDataSource {
     }
 
     return response.data!;
+  }
+
+  Future<AreaModel> createArea(CreateAreaRequestModel request) async {
+    final response = await _dioClient.postResponse<AreaModel>(
+      '/areas',
+      data: request.toJson(),
+      dataFromJson: AreaModel.fromJson,
+    );
+
+    if (!response.succeeded || response.data == null) {
+      _throwRequestFailure(
+        response.message,
+        response.errors,
+        'Không thể thêm khu vực',
+      );
+    }
+
+    return response.data!;
+  }
+
+  Future<AreaModel> updateArea({
+    required int areaId,
+    required UpdateAreaRequestModel request,
+  }) async {
+    final response = await _dioClient.putResponse<AreaModel>(
+      '/areas/$areaId',
+      data: request.toJson(),
+      dataFromJson: AreaModel.fromJson,
+    );
+
+    if (!response.succeeded || response.data == null) {
+      _throwRequestFailure(
+        response.message,
+        response.errors,
+        'Không thể cập nhật khu vực',
+      );
+    }
+
+    return response.data!;
+  }
+
+  Future<AreaModel> updateAreaDisplayOrder({
+    required int areaId,
+    required UpdateAreaDisplayOrderRequestModel request,
+  }) async {
+    final response = await _dioClient.putResponse<AreaModel>(
+      '/areas/$areaId/display-order',
+      data: request.toJson(),
+      dataFromJson: AreaModel.fromJson,
+    );
+
+    if (!response.succeeded || response.data == null) {
+      _throwRequestFailure(
+        response.message,
+        response.errors,
+        'Không thể cập nhật thứ tự khu vực',
+      );
+    }
+
+    return response.data!;
+  }
+
+  Future<void> deleteArea(int areaId) async {
+    final response = await _dioClient.deleteResponse<Object?>('/areas/$areaId');
+
+    if (!response.succeeded) {
+      _throwRequestFailure(
+        response.message,
+        response.errors,
+        'Không thể xóa khu vực',
+      );
+    }
   }
 
   Never _throwRequestFailure(

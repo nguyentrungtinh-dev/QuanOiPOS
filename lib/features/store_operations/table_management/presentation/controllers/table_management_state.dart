@@ -10,11 +10,17 @@ class TableManagementAccess {
   final int storeId;
   final bool canViewAreas;
   final bool canViewTables;
+  final bool canCreateArea;
+  final bool canUpdateArea;
+  final bool canDeleteArea;
 
   const TableManagementAccess({
     required this.storeId,
     required this.canViewAreas,
     required this.canViewTables,
+    required this.canCreateArea,
+    required this.canUpdateArea,
+    required this.canDeleteArea,
   });
 
   @override
@@ -24,11 +30,21 @@ class TableManagementAccess {
             runtimeType == other.runtimeType &&
             storeId == other.storeId &&
             canViewAreas == other.canViewAreas &&
-            canViewTables == other.canViewTables;
+            canViewTables == other.canViewTables &&
+            canCreateArea == other.canCreateArea &&
+            canUpdateArea == other.canUpdateArea &&
+            canDeleteArea == other.canDeleteArea;
   }
 
   @override
-  int get hashCode => Object.hash(storeId, canViewAreas, canViewTables);
+  int get hashCode => Object.hash(
+    storeId,
+    canViewAreas,
+    canViewTables,
+    canCreateArea,
+    canUpdateArea,
+    canDeleteArea,
+  );
 }
 
 class TableManagementState {
