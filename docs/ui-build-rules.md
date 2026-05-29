@@ -24,6 +24,18 @@ Luôn đọc và dùng các file sau trước khi viết UI:
 ## Reuse Before Rebuild
 Nếu một UI pattern xuất hiện từ 2 lần trở lên, hãy cân nhắc tách widget dùng chung trước khi tiếp tục copy/paste.
 
+### Decision checklist khi tạo/sửa widget
+1. Tìm widget/pattern tương tự trong feature đang làm trước.
+2. Nếu widget chỉ giúp giảm độ dài một page, tách private widget trong cùng file.
+3. Nếu widget được dùng lại trong cùng feature/sub-feature, đặt trong `presentation/widgets`.
+4. Nếu widget được dùng lại giữa nhiều feature, mới đưa vào shared/core phù hợp.
+5. Nếu chưa rõ nên đặt widget ở đâu, hỏi lại trước khi tạo shared/common widget.
+
+Nguyên tắc:
+- Không tạo `common`/`shared` widget chỉ vì dự đoán sau này có thể cần.
+- Widget feature-level không được gọi network trực tiếp; chỉ nhận data, state và callback từ page/provider.
+- Widget shared/core phải không phụ thuộc business context của một feature cụ thể.
+
 ### Widget nên tách ra tái sử dụng
 - `AppScaffold` hoặc `PageScaffold`: khung trang chuẩn có background, padding, app bar, action area, and content slot.
 - `PageHeader` hoặc `SectionHeader`: tiêu đề trang, subtitle, action nút bên phải.
@@ -80,7 +92,9 @@ Nếu một UI pattern xuất hiện từ 2 lần trở lên, hãy cân nhắc t
 ### Performance and Maintainability
 - Đừng đặt logic dựng UI phức tạp trong `build()` của page nếu có thể tách ra widget nhỏ hơn.
 - Nếu widget chỉ dùng chung trong cùng một page nhưng có pattern lặp, vẫn nên tách thành private widget nhỏ.
-- Nếu widget có khả năng dùng lại giữa nhiều feature, đặt vào thư mục shared/widget chung của core hoặc feature layer phù hợp.
+- Nếu widget dùng lại trong cùng feature, đặt vào `feature/.../presentation/widgets`.
+- Nếu widget dùng lại giữa nhiều feature, chỉ khi đó mới đặt vào shared/core phù hợp.
+- Trước khi tách widget shared/core, kiểm tra widget không phụ thuộc permission, route, provider hoặc business context của một feature cụ thể.
 
 ## Workspace/Store Switching UI Guidelines
 Áp dụng cho các màn: account hub, store picker, role home, switch store.
@@ -92,10 +106,14 @@ Nếu một UI pattern xuất hiện từ 2 lần trở lên, hãy cân nhắc t
   - `activeRole`
 - Hành động đổi store phải có vị trí ổn định và nhất quán giữa các role-home.
 - Pattern chọn store nên thống nhất theo một kiểu trong app: `modal` hoặc `bottom sheet` hoặc `full-page list`.
+- UI store workspace/module phải đi qua PBAC trong [docs/store-permission-access.md](store-permission-access.md).
+- Menu, tab, button và action liên quan store permission phải đọc permission qua `StoreAccessState.can(...)` hoặc `StoreAccessContext.can(...)`.
 
 ### Không được
 - Không render module làm việc khi chưa resolve xong `activeStore`.
 - Không nhúng business logic phân quyền role trực tiếp trong widget thuần.
+- Không tự parse permission response hoặc hardcode permission string trong widget.
+- Không trigger API/action khi user thiếu permission.
 - Không để mỗi role-home tự định nghĩa layout chuyển store khác nhau nếu có thể tái sử dụng.
 
 ## Checklist cho Role-based Home
@@ -109,7 +127,8 @@ Nếu một UI pattern xuất hiện từ 2 lần trở lên, hãy cân nhắc t
 2. Tìm xem pattern tương tự đã tồn tại chưa.
 3. Nếu có pattern lặp, tái sử dụng widget hoặc tách widget mới trước khi render màn hình.
 4. Kiểm tra trạng thái `empty/loading/error` và responsive breakpoints.
-5. Chỉ viết layout mới khi thật sự chưa có widget phù hợp.
+5. Nếu là store UI, xác định permission/menu/action visibility theo PBAC trước khi render.
+6. Chỉ viết layout mới khi thật sự chưa có widget phù hợp.
 
 ## Recommended Practice For This Project
 - Ưu tiên chuẩn hoá theme trước, rồi mới mở rộng shared widgets.

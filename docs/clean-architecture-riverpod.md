@@ -6,6 +6,9 @@ Tài liệu này quy định cách tổ chức code theo Clean Architecture và 
 Nguồn nghiệp vụ gốc:
 - `docs/spec.md`
 
+Rule coding/folder/naming chung:
+- `docs/coding-standards.md`
+
 Mục tiêu chính:
 - Tách bạch `presentation`, `domain`, `data`
 - Reuse tối đa các thành phần trong `lib/core`
@@ -19,6 +22,7 @@ Mục tiêu chính:
   - `presentation`: UI + state orchestration (Riverpod)
   - `domain`: entity, value object, use case, repository contract
   - `data`: datasource, dto/model, mapper, repository implementation
+- `lib/features/store_operations/<sub_feature>`: sub-feature trong store workspace, vẫn áp dụng clean layers khi có business/data riêng.
 
 Nguyên tắc phụ thuộc:
 - `presentation` phụ thuộc `domain`
@@ -27,24 +31,26 @@ Nguyên tắc phụ thuộc:
 - `lib/core` không phụ thuộc feature cụ thể
 
 ## 3. Cấu trúc thư mục đề xuất
+Cần ưu tiên cấu trúc thực tế hiện tại của repo:
+
 ```text
 lib/
   main.dart
   app.dart
+
+  config/
 
   core/
     constants/
     di/
     env/
     network/
+      dio/
+      interceptors/
+      responses/
+    session/
     storage/
     theme/
-    errors/
-    utils/
-    shared/
-      models/
-      enums/
-      extensions/
 
   features/
     auth/
@@ -79,27 +85,39 @@ lib/
         mappers/
         repositories/
 
+    subscription/
+      presentation/
+      domain/
+      data/
+
     system_admin/
-      store_management/
-      user_management/
-      package_management/
-      revenue/
+      presentation/
 
     store_operations/
-      owner/
-      manager/
-      staff/
-      kitchen/
-
-  shared/
-    widgets/
-    providers/
-    navigation/
+      presentation/
+        pages/
+        widgets/
+      table_management/
+        presentation/
+          pages/
+          widgets/
+          providers/
+          controllers/
+        domain/
+          entities/
+          repositories/
+          usecases/
+        data/
+          datasources/
+          models/
+          repositories/
 ```
 
 Ghi chú:
-- `system_admin` và `store_operations` có thể tách tiếp thành sub-feature theo module nghiệp vụ.
+- `system_admin` và `store_operations` có thể tách tiếp thành sub-feature theo module nghiệp vụ khi module có domain/data riêng.
+- Store sub-feature đặt dưới `store_operations/<module_name>` và giữ 3 layer như `table_management`.
 - Nếu feature nhỏ, có thể bắt đầu với ít thư mục hơn, nhưng vẫn giữ 3 layer chính.
+- Không tạo `lib/shared` nếu chưa có nhu cầu reuse thật giữa nhiều feature; xem thêm `docs/coding-standards.md`.
 
 ## 4. Quy tắc theo layer
 ### 4.1 Presentation
@@ -112,6 +130,7 @@ Không chứa:
 - Logic parse JSON
 - Logic gọi Dio trực tiếp
 - Business rules lõi nằm ngoài use case
+- Permission policy phức tạp hoặc response parsing của PBAC
 
 ### 4.2 Domain
 Chứa:
@@ -128,6 +147,7 @@ Chứa:
 - Remote/local datasource
 - DTO/model và mapper model <-> entity
 - Repository implementation
+- Xử lý API response envelope và chuyển đổi về domain entity/state lỗi phù hợp
 
 Không chứa:
 - Điều hướng UI
@@ -147,7 +167,19 @@ Không chứa:
 
 ### 5.3 Vị trí provider
 - Provider của feature đặt trong feature đó, dưới `presentation/providers`
-- Chỉ provider global mới đặt ở `lib/shared/providers` hoặc `lib/core/di`
+- Chỉ provider global/composition root mới đặt ở `lib/core/di` hoặc khu vực global đã có convention rõ ràng.
+- Provider sub-feature store đặt trong sub-feature, ví dụ `store_operations/table_management/presentation/providers`.
+
+### 5.4 Flow chuẩn
+Luồng phụ thuộc chuẩn:
+- `Page/Widget -> Notifier/Provider -> UseCase -> Repository contract -> Repository impl -> Datasource`
+
+Nguyên tắc:
+- Page/widget chỉ điều phối UI state, user intent và navigation cần thiết.
+- Notifier/provider gọi use case, không gọi Dio trực tiếp.
+- Use case làm việc qua repository contract.
+- Repository implementation gọi datasource và mapper.
+- Datasource xử lý endpoint/network detail qua `lib/core/network`.
 
 ## 6. Workspace Context Module (Required for StoreUser)
 Theo `docs/spec.md`, `StoreUser` sau login phải resolve workspace context trước khi vào module vận hành.
@@ -222,6 +254,8 @@ Dựa trên hiện trạng network layer:
 - Tái sử dụng `lib/core/network` hiện có
 - Repository/data mapper xử lý chuyển đổi response -> domain entity
 - Không để presentation xử lý response envelope
+- Không gọi Dio trực tiếp từ widget, page, notifier nếu đã có datasource/repository phù hợp.
+- Khi endpoint trả envelope/list phức tạp, parse trong data model/mapper và expose entity sạch cho domain/presentation.
 
 ## 11. Navigation và Access Guard
 ### 11.1 Account-type guard
@@ -256,9 +290,11 @@ Nguyên tắc:
 ## 13. Quy tắc thêm feature mới
 1. Đọc `docs/spec.md` để xác định đúng scope nghiệp vụ.
 2. Đọc tài liệu này để đặt đúng cấu trúc layer.
-3. Tái sử dụng `lib/core` trước khi tạo mới.
-4. Chỉ tạo abstraction khi có nhu cầu tái sử dụng thật.
-5. Giữ mỗi PR tập trung 1 feature hoặc 1 luồng nghiệp vụ rõ ràng.
+3. Đọc `docs/coding-standards.md` để áp dụng đúng folder, naming và reuse rule.
+4. Nếu feature liên quan store workspace/module/permission, đọc `docs/store-permission-access.md`.
+5. Tái sử dụng `lib/core` trước khi tạo mới.
+6. Chỉ tạo abstraction khi có nhu cầu tái sử dụng thật.
+7. Giữ mỗi PR tập trung 1 feature hoặc 1 luồng nghiệp vụ rõ ràng.
 
 ## 14. Definition of Done (Architecture)
 Một task được xem là hoàn thành về mặt kiến trúc khi:
@@ -272,3 +308,4 @@ Một task được xem là hoàn thành về mặt kiến trúc khi:
 ## 15. Change Log
 - 2026-05-19: Initial guideline based on spec and project constraints.
 - 2026-05-19: Added StoreUser workspace-context module contracts and dual-guard navigation rules.
+- 2026-05-29: Synced folder guidance with current repo, added coding standards reference, store sub-feature convention, and standard dependency flow.
