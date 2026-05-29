@@ -12,6 +12,7 @@ Tài liệu cần đọc theo ngữ cảnh:
 - Cần rule chung về folder, naming, coding style và reuse: đọc [docs/coding-standards.md](docs/coding-standards.md).
 - Làm store module, permission-based access control, menu/action visibility hoặc route guard theo store: đọc [docs/store-permission-access.md](docs/store-permission-access.md).
 - Dựng/chỉnh UI Flutter: đọc [docs/ui-build-rules.md](docs/ui-build-rules.md).
+- Dựng mock UI/prototype/static screen trước khi nối API: đọc [docs/mock-ui-first-rules.md](docs/mock-ui-first-rules.md).
 - Dựng/chỉnh UI store workspace hoặc store switching: đọc thêm [docs/store-ui-patterns.md](docs/store-ui-patterns.md).
 
 ## Bắt Buộc
@@ -19,6 +20,7 @@ Tài liệu cần đọc theo ngữ cảnh:
 - Ưu tiên sửa và tái sử dụng service, helper, interceptor, mapper, repository, provider, notifier và widget sẵn có thay vì copy logic.
 - Giữ naming và cấu trúc theo convention đang có trong dự án.
 - Mọi feature/store UI phải tuân theo PBAC nếu có liên quan store workspace, module store, permission, menu/action visibility hoặc route guard.
+- Mock UI phải có ranh giới rõ, đặt đúng feature/layer và không trộn mock data vào network/repository/use case thật.
 - Nếu thiếu API contract, permission code, role/access behavior, folder placement, reuse decision hoặc business rule quan trọng thì phải hỏi lại để confirm trước khi implement.
 - Nếu thêm file mới, đặt đúng layer và mục đích; file mới phải có nơi dùng rõ ràng.
 
@@ -27,6 +29,7 @@ Tài liệu cần đọc theo ngữ cảnh:
 - Không thay đổi kiến trúc nếu không có lợi ích rõ ràng cho feature hiện tại.
 - Không trộn business logic, API parsing, permission policy hoặc network call trực tiếp vào widget/UI.
 - Không hardcode permission code, color, spacing, typography, API base behavior nếu source of truth đã tồn tại.
+- Không rải mock data/demo state trong nhiều page/widget hoặc đặt mock data vào `lib/core`, datasource thật, repository thật.
 - Không tạo shared/common widget khi mới chỉ dùng một lần hoặc chưa có khả năng reuse thật.
 
 ## Before Implementing A Feature
@@ -34,7 +37,7 @@ Tài liệu cần đọc theo ngữ cảnh:
 2. Đọc [docs/clean-architecture-riverpod.md](docs/clean-architecture-riverpod.md) để đặt đúng layer theo Clean Architecture và Riverpod convention.
 3. Đọc [docs/coding-standards.md](docs/coding-standards.md) để áp dụng đúng folder, naming, coding style và reuse rule.
 4. Khi làm store module hoặc permission-based access control, đọc [docs/store-permission-access.md](docs/store-permission-access.md).
-5. Khi dựng/chỉnh UI Flutter, đọc [docs/ui-build-rules.md](docs/ui-build-rules.md); nếu là store workspace, đọc thêm [docs/store-ui-patterns.md](docs/store-ui-patterns.md).
+5. Khi dựng/chỉnh UI Flutter, đọc [docs/ui-build-rules.md](docs/ui-build-rules.md); nếu là mock UI/prototype, đọc thêm [docs/mock-ui-first-rules.md](docs/mock-ui-first-rules.md); nếu là store workspace, đọc thêm [docs/store-ui-patterns.md](docs/store-ui-patterns.md).
 6. Xác định feature thuộc layer nào: UI, domain, data, network, storage hay DI.
 7. Tìm implementation sẵn có trước khi thêm mới.
 8. Chỉ tách abstraction khi pattern lặp hoặc có khả năng tái sử dụng thật.
