@@ -2,6 +2,8 @@
 
 File này chỉ dùng khi agent đang xây hoặc chỉnh UI Flutter.
 
+Nếu task yêu cầu mock UI, prototype, static screen hoặc dựng UI trước khi nối API, bắt buộc đọc thêm [docs/mock-ui-first-rules.md](mock-ui-first-rules.md).
+
 ## Single Source of Truth
 Luôn đọc và dùng các file sau trước khi viết UI:
 - `lib/core/theme/app_colors.dart`
@@ -57,6 +59,12 @@ Nguyên tắc:
 - Cùng một bộ `BoxDecoration`, `TextStyle`, `EdgeInsets`, `BorderRadius` được dựng lại thủ công.
 
 ## UI Build Rules for Flutter
+### Mock UI First
+- Mock UI vẫn phải dùng theme/token/widget pattern hiện có như UI thật.
+- Không rải mock data trong nhiều widget/page; mock data phải có ranh giới rõ theo [docs/mock-ui-first-rules.md](mock-ui-first-rules.md).
+- Không tạo fake network/repository/use case production chỉ để render UI mock.
+- Nếu mock UI thuộc store workspace/module, vẫn phải áp dụng PBAC và trạng thái permission phù hợp.
+
 ### Layout
 - Ưu tiên layout rõ ràng, ít nesting không cần thiết.
 - Dùng `const` khi có thể.
@@ -125,10 +133,11 @@ Nguyên tắc:
 ## What to do before generating a new screen
 1. Xác định token có sẵn trong theme thay vì viết style mới.
 2. Tìm xem pattern tương tự đã tồn tại chưa.
-3. Nếu có pattern lặp, tái sử dụng widget hoặc tách widget mới trước khi render màn hình.
-4. Kiểm tra trạng thái `empty/loading/error` và responsive breakpoints.
-5. Nếu là store UI, xác định permission/menu/action visibility theo PBAC trước khi render.
-6. Chỉ viết layout mới khi thật sự chưa có widget phù hợp.
+3. Nếu là mock UI/prototype, đọc [docs/mock-ui-first-rules.md](mock-ui-first-rules.md) và xác định nơi đặt mock data trước khi viết layout.
+4. Nếu có pattern lặp, tái sử dụng widget hoặc tách widget mới trước khi render màn hình.
+5. Kiểm tra trạng thái `empty/loading/error` và responsive breakpoints.
+6. Nếu là store UI, xác định permission/menu/action visibility theo PBAC trước khi render.
+7. Chỉ viết layout mới khi thật sự chưa có widget phù hợp.
 
 ## Recommended Practice For This Project
 - Ưu tiên chuẩn hoá theme trước, rồi mới mở rộng shared widgets.

@@ -70,6 +70,16 @@ Nếu phải mở rộng source of truth:
 - Giữ API nhỏ và đúng mục đích.
 - Cập nhật các call site liên quan thay vì copy logic.
 
+## Mock UI First
+Khi feature cần dựng UI trước rồi nối API sau, đọc [docs/mock-ui-first-rules.md](mock-ui-first-rules.md).
+
+Quy tắc nhanh:
+- Mock data phải nằm gần feature UI, ví dụ `presentation/mock/`, `presentation/fixtures/`, hoặc private const trong page/widget nếu rất nhỏ.
+- Không đặt mock data trong `lib/core`, datasource thật, repository thật, network client hoặc storage/session thật.
+- Không tạo abstraction production chỉ để phục vụ dữ liệu demo.
+- Page/widget nên nhận data qua state/provider để sau này thay mock bằng API mà không viết lại layout.
+- Mock provider/data phải đặt tên rõ và có TODO ngắn để thay bằng API thật khi contract sẵn sàng.
+
 ## PBAC And Store Features
 Mọi feature liên quan store workspace/module/action/menu phải tuân theo [docs/store-permission-access.md](store-permission-access.md):
 - Page store phải resolve `StoreAccessState` trước khi render nội dung nghiệp vụ.
@@ -93,6 +103,7 @@ Một thay đổi code được xem là đúng chuẩn khi:
 - Reuse source of truth trước khi tạo mới.
 - Không có business logic trong UI.
 - PBAC được áp dụng cho store feature nếu liên quan.
+- Mock UI có ranh giới rõ và không trộn vào network/repository/use case production.
 - Widget mới có scope đúng: private, feature-level hoặc shared/core.
 - Naming khớp convention hiện có.
 - Có test phù hợp với rủi ro thay đổi, hoặc nếu không test thì nêu rõ lý do.
