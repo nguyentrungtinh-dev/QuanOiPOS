@@ -10,6 +10,7 @@ class TableManagementNotifier
         AutoDisposeFamilyNotifier<TableManagementState, TableManagementAccess> {
   late final TableManagementAccess _access;
   bool _initialLoadStarted = false;
+  Future<void> _areaOrderSaveQueue = Future<void>.value();
 
   @override
   TableManagementState build(TableManagementAccess arg) {
@@ -57,6 +58,7 @@ class TableManagementNotifier
         canViewTables: _access.canViewTables,
         clearError: true,
       );
+      _areaOrderSaveQueue = Future<void>.value();
     } catch (error) {
       state = state.copyWith(
         status: TableManagementStatus.error,
@@ -155,19 +157,7 @@ class TableManagementNotifier
     for (var index = 0; index < reorderedAreas.length; index += 1) {
       final nextOrder = index + 1;
       final area = reorderedAreas[index];
-      final normalizedArea = Area(
-        id: area.id,
-        storeId: area.storeId,
-        name: area.name,
-        description: area.description,
-        displayOrder: nextOrder,
-        isActive: area.isActive,
-        createdAt: area.createdAt,
-        createdBy: area.createdBy,
-        updatedAt: area.updatedAt,
-        updatedBy: area.updatedBy,
-        isDeleted: area.isDeleted,
-      );
+      final normalizedArea = _copyAreaWithDisplayOrder(area, nextOrder);
       normalizedAreas.add(normalizedArea);
 
       if (oldOrdersById[area.id] != nextOrder) {
@@ -175,16 +165,39 @@ class TableManagementNotifier
       }
     }
 
-    state = state.copyWith(areas: normalizedAreas);
+    final normalizedAreasById = {
+      for (final area in normalizedAreas) area.id: area,
+    };
+    final syncedTableGroups = state.tableGroups.map((group) {
+      final area = normalizedAreasById[group.area.id];
+      if (area == null) {
+        return group;
+      }
 
-    for (final area in changedAreas) {
-      await ref.read(updateAreaDisplayOrderUseCaseProvider)(
-        areaId: area.id,
-        displayOrder: area.displayOrder,
-      );
+      return TableAreaGroup(area: area, tables: group.tables);
+    }).toList();
+
+    state = state.copyWith(
+      areas: normalizedAreas,
+      tableGroups: syncedTableGroups,
+    );
+
+    if (changedAreas.isEmpty) {
+      return;
     }
 
-    await load();
+    final areasToSave = List<Area>.unmodifiable(normalizedAreas);
+    final saveOperation = _areaOrderSaveQueue.then((_) async {
+      for (final area in areasToSave) {
+        await ref.read(updateAreaDisplayOrderUseCaseProvider)(
+          areaId: area.id,
+          displayOrder: area.displayOrder,
+        );
+      }
+    });
+    _areaOrderSaveQueue = saveOperation.catchError((Object _) {});
+
+    return saveOperation;
   }
 
   void selectArea(int? areaId) {
@@ -210,5 +223,21 @@ class TableManagementNotifier
     if (!isAllowed) {
       throw Exception(message);
     }
+  }
+
+  Area _copyAreaWithDisplayOrder(Area area, int displayOrder) {
+    return Area(
+      id: area.id,
+      storeId: area.storeId,
+      name: area.name,
+      description: area.description,
+      displayOrder: displayOrder,
+      isActive: area.isActive,
+      createdAt: area.createdAt,
+      createdBy: area.createdBy,
+      updatedAt: area.updatedAt,
+      updatedBy: area.updatedBy,
+      isDeleted: area.isDeleted,
+    );
   }
 }

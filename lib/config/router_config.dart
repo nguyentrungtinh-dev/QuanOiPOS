@@ -9,6 +9,7 @@ import '../features/auth/domain/entities/account_type.dart';
 import '../features/auth/presentation/pages/auth_page.dart';
 import '../features/auth/presentation/providers/auth_providers.dart';
 import '../features/system_admin/presentation/pages/system_admin_home_page.dart';
+import '../features/store_operations/presentation/pages/about_app_page.dart';
 import '../features/store_operations/presentation/pages/operation_regulations_page.dart';
 import '../features/store_operations/presentation/pages/privacy_policy_page.dart';
 import '../features/store_operations/presentation/pages/store_home_page.dart';
@@ -42,6 +43,7 @@ abstract final class RouteNames {
   static const String storeSubscription = 'store-subscription';
   static const String operationRegulations = 'operation-regulations';
   static const String privacyPolicy = 'privacy-policy';
+  static const String aboutApp = 'about-app';
   static const String splash = 'splash';
 }
 
@@ -208,6 +210,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const PrivacyPolicyPage(),
       ),
       GoRoute(
+        path: '/about-app',
+        name: RouteNames.aboutApp,
+        builder: (context, state) => const AboutAppPage(),
+      ),
+      GoRoute(
         path: '/my-stores',
         name: RouteNames.myStores,
         builder: (context, state) => const MyStoresPage(),
@@ -251,6 +258,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             state.matchedLocation == '/store-subscription' ||
             state.matchedLocation == '/operation-regulations' ||
             state.matchedLocation == '/privacy-policy' ||
+            state.matchedLocation == '/about-app' ||
             state.matchedLocation == '/my-stores' ||
             state.matchedLocation.startsWith('/stores/')) {
           return '/system-admin-home';

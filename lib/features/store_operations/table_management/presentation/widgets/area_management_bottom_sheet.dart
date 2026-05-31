@@ -23,7 +23,6 @@ class _AreaManagementBottomSheetState
   final _searchController = TextEditingController();
   String _query = '';
   bool _isEditing = false;
-  bool _isReordering = false;
 
   @override
   void dispose() {
@@ -145,7 +144,6 @@ class _AreaManagementBottomSheetState
                 canReorder:
                     _isEditing && widget.access.canUpdateArea && _query.isEmpty,
                 isEditing: _isEditing,
-                isReordering: _isReordering,
                 canUpdateArea: widget.access.canUpdateArea,
                 canDeleteArea: widget.access.canDeleteArea,
                 onSelected: (area) {
@@ -264,7 +262,6 @@ class _AreaManagementBottomSheetState
     final area = currentAreas.removeAt(oldIndex);
     currentAreas.insert(newIndex, area);
 
-    setState(() => _isReordering = true);
     try {
       await ref
           .read(tableManagementNotifierProvider(widget.access).notifier)
@@ -274,10 +271,6 @@ class _AreaManagementBottomSheetState
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(_cleanError(error))));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isReordering = false);
       }
     }
   }
@@ -291,7 +284,6 @@ class _AreaList extends StatelessWidget {
   final List<Area> areas;
   final bool canReorder;
   final bool isEditing;
-  final bool isReordering;
   final bool canUpdateArea;
   final bool canDeleteArea;
   final ValueChanged<Area> onSelected;
@@ -303,7 +295,6 @@ class _AreaList extends StatelessWidget {
     required this.areas,
     required this.canReorder,
     required this.isEditing,
-    required this.isReordering,
     required this.canUpdateArea,
     required this.canDeleteArea,
     required this.onSelected,
@@ -319,45 +310,34 @@ class _AreaList extends StatelessWidget {
     }
 
     if (canReorder) {
-      return Stack(
-        children: [
-          ReorderableListView.builder(
-            buildDefaultDragHandles: false,
-            padding: const EdgeInsets.fromLTRB(
-              AppConstants.spacingLg,
-              0,
-              AppConstants.spacingLg,
-              AppConstants.spacingXl,
-            ),
-            itemCount: areas.length,
-            onReorder: onReorder,
-            proxyDecorator: (child, index, animation) {
-              return Material(color: Colors.transparent, child: child);
-            },
-            itemBuilder: (context, index) {
-              final area = areas[index];
-              return _AreaListTile(
-                key: ValueKey('area_${area.id}'),
-                area: area,
-                index: index,
-                isEditing: isEditing,
-                showReorderHandle: true,
-                canUpdateArea: canUpdateArea,
-                canDeleteArea: canDeleteArea,
-                onSelected: onSelected,
-                onEdit: onEdit,
-                onDelete: onDelete,
-              );
-            },
-          ),
-          if (isReordering)
-            const Positioned.fill(
-              child: ColoredBox(
-                color: Color(0x33FFFFFF),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
-        ],
+      return ReorderableListView.builder(
+        buildDefaultDragHandles: false,
+        padding: const EdgeInsets.fromLTRB(
+          AppConstants.spacingLg,
+          0,
+          AppConstants.spacingLg,
+          AppConstants.spacingXl,
+        ),
+        itemCount: areas.length,
+        onReorder: onReorder,
+        proxyDecorator: (child, index, animation) {
+          return Material(color: Colors.transparent, child: child);
+        },
+        itemBuilder: (context, index) {
+          final area = areas[index];
+          return _AreaListTile(
+            key: ValueKey('area_${area.id}'),
+            area: area,
+            index: index,
+            isEditing: isEditing,
+            showReorderHandle: true,
+            canUpdateArea: canUpdateArea,
+            canDeleteArea: canDeleteArea,
+            onSelected: onSelected,
+            onEdit: onEdit,
+            onDelete: onDelete,
+          );
+        },
       );
     }
 

@@ -23,21 +23,43 @@ class AccountPdfDocumentPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: SafeArea(
-        child: Container(
-          color: AppColors.surface,
-          child: PdfViewer.asset(
-            assetPath,
-            key: viewerKey,
-            params: PdfViewerParams(
-              margin: 0,
-              backgroundColor: AppColors.surface,
-              sizeDelegateProvider: const PdfViewerSizeDelegateProviderSmart(
-                smartMaxScale: 4,
-              ),
-              loadingBannerBuilder: _buildLoadingBanner,
-              errorBannerBuilder: _buildErrorBanner,
-            ),
+        child: AccountPdfDocumentViewer(
+          assetPath: assetPath,
+          viewerKey: viewerKey,
+          errorMessage: errorMessage,
+        ),
+      ),
+    );
+  }
+}
+
+class AccountPdfDocumentViewer extends StatelessWidget {
+  final String assetPath;
+  final Key viewerKey;
+  final String errorMessage;
+
+  const AccountPdfDocumentViewer({
+    super.key,
+    required this.assetPath,
+    required this.viewerKey,
+    required this.errorMessage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.surface,
+      child: PdfViewer.asset(
+        assetPath,
+        key: viewerKey,
+        params: PdfViewerParams(
+          margin: 0,
+          backgroundColor: AppColors.surface,
+          sizeDelegateProvider: const PdfViewerSizeDelegateProviderSmart(
+            smartMaxScale: 4,
           ),
+          loadingBannerBuilder: _buildLoadingBanner,
+          errorBannerBuilder: _buildErrorBanner,
         ),
       ),
     );

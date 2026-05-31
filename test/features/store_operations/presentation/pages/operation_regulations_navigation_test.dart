@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quan_oi/config/router_config.dart';
+import 'package:quan_oi/core/constants/app_constants.dart';
 import 'package:quan_oi/core/storage/last_active_store_storage.dart';
 import 'package:quan_oi/core/theme/index.dart';
 import 'package:quan_oi/features/auth/domain/entities/account_type.dart';
@@ -73,6 +74,46 @@ void main() {
     expect(find.byKey(const Key('privacy_policy_pdf_viewer')), findsOneWidget);
   });
 
+  testWidgets('StoreUser opens about app from account hub', (tester) async {
+    final container = _buildContainer(AccountType.storeUser);
+    addTearDown(container.dispose);
+
+    final router = container.read(routerProvider);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+
+    router.go('/store-home');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Về ứng dụng'), findsOneWidget);
+    expect(find.text('Đóng góp ý kiến'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Về ứng dụng'));
+    await tester.tap(find.text('Về ứng dụng'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Về ứng dụng'), findsOneWidget);
+    expect(find.byKey(const Key('about_app_header_card')), findsOneWidget);
+    expect(find.byKey(const Key('about_app_logo')), findsOneWidget);
+    expect(find.text(AppConstants.appName), findsOneWidget);
+    expect(
+      find.text('Phiên bản ứng dụng ${AppConstants.appVersion}'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('about_app_content_card')), findsOneWidget);
+    expect(find.text('QUÁN ƠI'), findsOneWidget);
+    expect(
+      find.textContaining('QUẢN LÝ BÁN HÀNG CHỈ BẰNG MỘT CHIẾC ĐIỆN THOẠI'),
+      findsWidgets,
+    );
+  });
+
   testWidgets(
     'SystemAdmin is redirected away from operation regulations route',
     (tester) async {
@@ -120,6 +161,27 @@ void main() {
 
     expect(find.text('SystemAdmin Workspace'), findsOneWidget);
     expect(find.byKey(const Key('privacy_policy_pdf_viewer')), findsNothing);
+  });
+
+  testWidgets('SystemAdmin is redirected away from about app route', (
+    tester,
+  ) async {
+    final container = _buildContainer(AccountType.systemAdmin);
+    addTearDown(container.dispose);
+
+    final router = container.read(routerProvider);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+
+    router.go('/about-app');
+    await tester.pumpAndSettle();
+
+    expect(find.text('SystemAdmin Workspace'), findsOneWidget);
+    expect(find.byKey(const Key('about_app_content_card')), findsNothing);
   });
 }
 

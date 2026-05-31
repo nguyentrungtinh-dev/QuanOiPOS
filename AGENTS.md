@@ -15,6 +15,12 @@ Tài liệu cần đọc theo ngữ cảnh:
 - Dựng mock UI/prototype/static screen trước khi nối API: đọc [docs/mock-ui-first-rules.md](docs/mock-ui-first-rules.md).
 - Dựng/chỉnh UI store workspace hoặc store switching: đọc thêm [docs/store-ui-patterns.md](docs/store-ui-patterns.md).
 
+## Optional CodeGraph Support
+- Nếu CodeGraph MCP hoặc CLI `codegraph` khả dụng, ưu tiên dùng nó để tìm symbol, context, callers/callees và impact trước khi sửa code nhiều layer.
+- Trước khi trace/refactor lớn, nếu có CLI `codegraph`, chạy `codegraph sync` để cập nhật index.
+- Nếu CodeGraph không khả dụng, tiếp tục dùng `rg`, đọc file trực tiếp và các docs source of truth của dự án; không block task vì thiếu CodeGraph.
+- `.codegraph/` là index local, không commit.
+
 ## Bắt Buộc
 - Tìm xem code hiện có đã giải quyết được bài toán chưa trước khi tạo mới.
 - Ưu tiên sửa và tái sử dụng service, helper, interceptor, mapper, repository, provider, notifier và widget sẵn có thay vì copy logic.

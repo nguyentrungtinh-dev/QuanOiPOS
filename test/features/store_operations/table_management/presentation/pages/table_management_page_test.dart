@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -631,6 +633,145 @@ void main() {
     );
   });
 
+  testWidgets('reordering areas saves in background without loading overlay', (
+    tester,
+  ) async {
+    final tableRepository = _FakeTableManagementRepository();
+
+    await _pumpPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 3, code: 'TABLE.VIEW'),
+        StorePermission(permissionId: 6, code: 'AREA.UPDATE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    final initialLoadAreasCount = tableRepository.loadAreasCallCount;
+    final initialLoadTableGroupsCount =
+        tableRepository.loadTableGroupsCallCount;
+
+    await tester.tap(find.byKey(const Key('manage_areas_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('edit_areas_button')));
+    await tester.pumpAndSettle();
+
+    final reorderableList = tester.widget<ReorderableListView>(
+      find.byType(ReorderableListView),
+    );
+    reorderableList.onReorder(0, 2);
+    await tester.pumpAndSettle();
+
+    final sheet = find.byKey(const Key('area_management_sheet'));
+    final gardenArea = find
+        .descendant(of: sheet, matching: find.text('Sân vườn'))
+        .first;
+    final insideArea = find
+        .descendant(of: sheet, matching: find.text('Bên trong'))
+        .first;
+
+    expect(
+      tester.getTopLeft(gardenArea).dy,
+      lessThan(tester.getTopLeft(insideArea).dy),
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(tableRepository.updateAreaDisplayOrderCallCount, 2);
+    expect(tableRepository.updateAreaDisplayOrderRequests, ['7:1', '6:2']);
+    expect(tableRepository.loadAreasCallCount, initialLoadAreasCount);
+    expect(
+      tableRepository.loadTableGroupsCallCount,
+      initialLoadTableGroupsCount,
+    );
+  });
+
+  testWidgets('reorder area error shows snackbar without locking the list', (
+    tester,
+  ) async {
+    final tableRepository = _FakeTableManagementRepository()
+      ..failUpdateAreaDisplayOrder = true;
+
+    await _pumpPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 6, code: 'AREA.UPDATE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('manage_areas_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('edit_areas_button')));
+    await tester.pumpAndSettle();
+
+    tester
+        .widget<ReorderableListView>(find.byType(ReorderableListView))
+        .onReorder(0, 2);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Không thể lưu thứ tự khu vực'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('rapid area reorders queue display-order saves', (tester) async {
+    final tableRepository = _FakeTableManagementRepository()
+      ..holdUpdateAreaDisplayOrder = true;
+
+    await _pumpPage(
+      tester,
+      permissions: const [
+        StorePermission(permissionId: 2, code: 'AREA.VIEW'),
+        StorePermission(permissionId: 6, code: 'AREA.UPDATE'),
+      ],
+      tableRepository: tableRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('manage_areas_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('edit_areas_button')));
+    await tester.pumpAndSettle();
+
+    tester
+        .widget<ReorderableListView>(find.byType(ReorderableListView))
+        .onReorder(0, 2);
+    await tester.pump();
+
+    expect(tableRepository.updateAreaDisplayOrderRequests, ['7:1']);
+    expect(tableRepository.updateAreaDisplayOrderCompleters, hasLength(1));
+
+    tester
+        .widget<ReorderableListView>(find.byType(ReorderableListView))
+        .onReorder(0, 2);
+    await tester.pump();
+
+    expect(tableRepository.updateAreaDisplayOrderRequests, ['7:1']);
+
+    await _completeDisplayOrderSave(tester, tableRepository, 0);
+    expect(tableRepository.updateAreaDisplayOrderRequests, ['7:1', '6:2']);
+
+    await _completeDisplayOrderSave(tester, tableRepository, 1);
+    expect(tableRepository.updateAreaDisplayOrderRequests, [
+      '7:1',
+      '6:2',
+      '6:1',
+    ]);
+
+    await _completeDisplayOrderSave(tester, tableRepository, 2);
+    expect(tableRepository.updateAreaDisplayOrderRequests, [
+      '7:1',
+      '6:2',
+      '6:1',
+      '7:2',
+    ]);
+
+    await _completeDisplayOrderSave(tester, tableRepository, 3);
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('area action buttons are disabled by PBAC', (tester) async {
     final tableRepository = _FakeTableManagementRepository();
 
@@ -820,6 +961,16 @@ Future<Finder> _scrollToFirstAddTableTile(WidgetTester tester) async {
   await tester.drag(find.byType(ListView).first, const Offset(0, -500));
   await tester.pumpAndSettle();
   return find.byType(AddTableTile).first;
+}
+
+Future<void> _completeDisplayOrderSave(
+  WidgetTester tester,
+  _FakeTableManagementRepository tableRepository,
+  int index,
+) async {
+  tableRepository.updateAreaDisplayOrderCompleters[index].complete();
+  await tester.pump();
+  await tester.pump();
 }
 
 Future<void> _pumpPage(
@@ -1033,6 +1184,10 @@ class _FakeTableManagementRepository implements TableManagementRepository {
   int updateTableCallCount = 0;
   int updateAreaDisplayOrderCallCount = 0;
   int deleteAreaCallCount = 0;
+  bool failUpdateAreaDisplayOrder = false;
+  bool holdUpdateAreaDisplayOrder = false;
+  final updateAreaDisplayOrderRequests = <String>[];
+  final updateAreaDisplayOrderCompleters = <Completer<void>>[];
   int? lastAreaId;
   int? lastCreatedTableStoreId;
   int? lastCreatedTableAreaId;
@@ -1154,6 +1309,17 @@ class _FakeTableManagementRepository implements TableManagementRepository {
     required int displayOrder,
   }) async {
     updateAreaDisplayOrderCallCount += 1;
+    updateAreaDisplayOrderRequests.add('$areaId:$displayOrder');
+    if (failUpdateAreaDisplayOrder) {
+      throw Exception('Không thể lưu thứ tự khu vực');
+    }
+
+    if (holdUpdateAreaDisplayOrder) {
+      final completer = Completer<void>();
+      updateAreaDisplayOrderCompleters.add(completer);
+      await completer.future;
+    }
+
     return _areas
         .firstWhere((area) => area.id == areaId)
         .copyWithDisplayOrder(displayOrder);
