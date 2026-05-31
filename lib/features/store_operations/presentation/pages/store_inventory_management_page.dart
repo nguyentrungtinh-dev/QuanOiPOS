@@ -88,7 +88,7 @@ class _ReadyView extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: AppConstants.spacingMd),
-          const _InventoryActionList(),
+          _InventoryActionList(storeId: accessContext.store.id),
         ],
       ),
     );
@@ -96,14 +96,32 @@ class _ReadyView extends StatelessWidget {
 }
 
 class _InventoryActionList extends StatelessWidget {
-  const _InventoryActionList();
+  final int storeId;
+
+  const _InventoryActionList({required this.storeId});
 
   static const _items = [
-    _InventoryActionItemData('Nhập kho', Icons.move_to_inbox_outlined),
+    _InventoryActionItemData(
+      'Nhập kho',
+      Icons.move_to_inbox_outlined,
+      routeName: RouteNames.storeInventoryImport,
+    ),
     _InventoryActionItemData('Xuất kho', Icons.outbox_outlined),
-    _InventoryActionItemData('Sổ kho', Icons.fact_check_outlined),
-    _InventoryActionItemData('Kiểm kho', Icons.inventory_outlined),
-    _InventoryActionItemData('Tồn kho', Icons.warehouse_outlined),
+    _InventoryActionItemData(
+      'Sổ kho',
+      Icons.receipt_long_outlined,
+      routeName: RouteNames.storeInventoryLedger,
+    ),
+    _InventoryActionItemData(
+      'Kiểm kho',
+      Icons.fact_check_outlined,
+      routeName: RouteNames.storeInventoryCheck,
+    ),
+    _InventoryActionItemData(
+      'Tồn kho',
+      Icons.warehouse_outlined,
+      routeName: RouteNames.storeInventoryStock,
+    ),
     _InventoryActionItemData('In mã vạch', Icons.qr_code_2_rounded),
   ];
 
@@ -115,7 +133,7 @@ class _InventoryActionList extends StatelessWidget {
       child: Column(
         children: [
           for (var index = 0; index < _items.length; index++) ...[
-            _InventoryActionTile(item: _items[index]),
+            _InventoryActionTile(item: _items[index], storeId: storeId),
             if (index < _items.length - 1)
               const Divider(
                 height: 1,
@@ -131,13 +149,25 @@ class _InventoryActionList extends StatelessWidget {
 
 class _InventoryActionTile extends StatelessWidget {
   final _InventoryActionItemData item;
+  final int storeId;
 
-  const _InventoryActionTile({required this.item});
+  const _InventoryActionTile({required this.item, required this.storeId});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => _showComingSoon(context, item.title),
+      onTap: () {
+        final routeName = item.routeName;
+        if (routeName != null) {
+          context.goNamed(
+            routeName,
+            pathParameters: {'storeId': storeId.toString()},
+          );
+          return;
+        }
+
+        _showComingSoon(context, item.title);
+      },
       borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -235,8 +265,9 @@ class _LoadingView extends StatelessWidget {
 class _InventoryActionItemData {
   final String title;
   final IconData icon;
+  final String? routeName;
 
-  const _InventoryActionItemData(this.title, this.icon);
+  const _InventoryActionItemData(this.title, this.icon, {this.routeName});
 }
 
 void _showComingSoon(BuildContext context, String feature) {

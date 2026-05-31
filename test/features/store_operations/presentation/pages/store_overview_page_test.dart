@@ -96,11 +96,160 @@ void main() {
     expect(find.text('Bạn chưa có quyền xem quản lý kho'), findsNothing);
   });
 
-  testWidgets('inventory tile navigates to inventory management actions', (
-    tester,
-  ) async {
-    final repository = const _FakeWorkspaceRepository(
-      permissions: [StorePermission(permissionId: 1, code: 'DASHBOARD.VIEW')],
+  testWidgets(
+    'inventory tile navigates to mock stock page without permission',
+    (tester) async {
+      final repository = const _FakeWorkspaceRepository(
+        permissions: [StorePermission(permissionId: 1, code: 'DASHBOARD.VIEW')],
+      );
+      final container = _buildRouterContainer(repository);
+      addTearDown(container.dispose);
+
+      final router = container.read(routerProvider);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            theme: AppTheme.light,
+            routerConfig: router,
+          ),
+        ),
+      );
+
+      router.go('/stores/5');
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(ListView), const Offset(0, -900));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Quản lý kho'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Quản lý kho'), findsOneWidget);
+      expect(find.text('Nhập kho'), findsOneWidget);
+      expect(find.text('Xuất kho'), findsOneWidget);
+      expect(find.text('Sổ kho'), findsOneWidget);
+      expect(find.text('Kiểm kho'), findsOneWidget);
+      expect(find.text('Tồn kho'), findsOneWidget);
+      expect(find.text('In mã vạch'), findsOneWidget);
+
+      await tester.tap(find.text('Tồn kho'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tồn kho'), findsOneWidget);
+      expect(find.text('Tìm tên, mã SKU, ...'), findsOneWidget);
+      expect(find.text('Danh mục'), findsWidgets);
+      expect(find.text('Trạng thái'), findsOneWidget);
+      expect(find.text('Sắp xếp'), findsOneWidget);
+      expect(
+        find.textContaining('Số lượng 158', findRichText: true),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Giá trị tồn 84.000', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.text('Thăng Long'), findsOneWidget);
+      expect(find.text('SP0048'), findsOneWidget);
+      expect(find.text('Kho: 9/9'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'inventory import tile navigates to mock import page without permission',
+    (tester) async {
+      final repository = const _FakeWorkspaceRepository(
+        permissions: [StorePermission(permissionId: 1, code: 'DASHBOARD.VIEW')],
+      );
+      final container = _buildRouterContainer(repository);
+      addTearDown(container.dispose);
+
+      final router = container.read(routerProvider);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            theme: AppTheme.light,
+            routerConfig: router,
+          ),
+        ),
+      );
+
+      router.go('/stores/5/inventory');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Nhập kho'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sổ nhập hàng'), findsOneWidget);
+      expect(find.text('Tất cả'), findsOneWidget);
+      expect(find.text('Chờ xác nhận'), findsOneWidget);
+      expect(find.text('Chưa thanh toán'), findsOneWidget);
+      expect(find.text('Hoàn thành'), findsWidgets);
+      expect(find.text('Tháng này'), findsOneWidget);
+      expect(find.text('Phân loại'), findsOneWidget);
+      expect(find.text('Trạng thái'), findsOneWidget);
+      expect(find.text('#NH265'), findsOneWidget);
+      expect(find.text('13:01 27/05/26'), findsOneWidget);
+      expect(find.text('3.500'), findsOneWidget);
+      expect(find.text('Đã thanh toán'), findsWidgets);
+      expect(find.text('Tạo nhập hàng'), findsOneWidget);
+      expect(find.byIcon(Icons.file_download_outlined), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'inventory ledger tile navigates to mock ledger page without permission',
+    (tester) async {
+      final repository = const _FakeWorkspaceRepository(
+        permissions: [StorePermission(permissionId: 1, code: 'DASHBOARD.VIEW')],
+      );
+      final container = _buildRouterContainer(repository);
+      addTearDown(container.dispose);
+
+      final router = container.read(routerProvider);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            theme: AppTheme.light,
+            routerConfig: router,
+          ),
+        ),
+      );
+
+      router.go('/stores/5/inventory');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Sổ kho'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sổ kho'), findsOneWidget);
+      expect(find.text('Tháng này'), findsOneWidget);
+      expect(find.text('Phân loại'), findsOneWidget);
+      expect(find.text('Loại hàng'), findsOneWidget);
+      expect(find.text('Tồn đầu kỳ'), findsOneWidget);
+      expect(find.text('106.000 đ'), findsOneWidget);
+      expect(find.text('Nhập trong kỳ'), findsOneWidget);
+      expect(find.text('87.500 đ'), findsOneWidget);
+      expect(find.text('Xuất trong kỳ'), findsOneWidget);
+      expect(find.text('59.500 đ'), findsOneWidget);
+      expect(find.text('Tồn cuối kỳ'), findsOneWidget);
+      expect(find.text('134.000 đ'), findsOneWidget);
+      expect(find.text('HÔM NAY'), findsOneWidget);
+      expect(find.text('Thăng Long'), findsWidgets);
+      expect(find.text('SP0048'), findsWidgets);
+      expect(find.text('#XH2074 - Bán hàng'), findsOneWidget);
+      expect(find.text('SL: -1'), findsWidgets);
+      expect(find.text('Xuất hàng'), findsOneWidget);
+      expect(find.text('Kiểm kho'), findsOneWidget);
+      expect(find.text('Nhập hàng'), findsOneWidget);
+    },
+  );
+
+  testWidgets('inventory ledger page keeps access error state', (tester) async {
+    final repository = _FakeWorkspaceRepository(
+      permissions: const [],
+      accessError: Exception('Store access failed'),
     );
     final container = _buildRouterContainer(repository);
     addTearDown(container.dispose);
@@ -113,26 +262,125 @@ void main() {
       ),
     );
 
-    router.go('/stores/5');
+    router.go('/stores/5/inventory/ledger');
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(ListView), const Offset(0, -900));
+    expect(find.text('Store access failed'), findsOneWidget);
+    expect(find.text('106.000 đ'), findsNothing);
+    expect(find.text('Thử lại'), findsOneWidget);
+  });
+
+  testWidgets('inventory import page keeps access error state', (tester) async {
+    final repository = _FakeWorkspaceRepository(
+      permissions: const [],
+      accessError: Exception('Store access failed'),
+    );
+    final container = _buildRouterContainer(repository);
+    addTearDown(container.dispose);
+
+    final router = container.read(routerProvider);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+
+    router.go('/stores/5/inventory/imports');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Quản lý kho'));
+
+    expect(find.text('Store access failed'), findsOneWidget);
+    expect(find.text('#NH265'), findsNothing);
+    expect(find.text('Thử lại'), findsOneWidget);
+  });
+
+  testWidgets(
+    'inventory check tile navigates to mock empty page without permission',
+    (tester) async {
+      final repository = const _FakeWorkspaceRepository(
+        permissions: [StorePermission(permissionId: 1, code: 'DASHBOARD.VIEW')],
+      );
+      final container = _buildRouterContainer(repository);
+      addTearDown(container.dispose);
+
+      final router = container.read(routerProvider);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            theme: AppTheme.light,
+            routerConfig: router,
+          ),
+        ),
+      );
+
+      router.go('/stores/5/inventory');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Kiểm kho'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Kiểm kho'), findsOneWidget);
+      expect(find.text('Tất cả'), findsOneWidget);
+      expect(find.text('Đang kiểm kho'), findsOneWidget);
+      expect(find.text('Đã cân bằng'), findsOneWidget);
+      expect(find.text('Tháng này'), findsOneWidget);
+      expect(find.text('Phân loại'), findsOneWidget);
+      expect(find.text('Nhân viên'), findsOneWidget);
+      expect(find.text('Bạn chưa có phiếu kiểm kho nào!'), findsOneWidget);
+      expect(find.text('Tạo kiểm kho'), findsOneWidget);
+      expect(find.byIcon(Icons.file_download_outlined), findsOneWidget);
+    },
+  );
+
+  testWidgets('inventory check page keeps access error state', (tester) async {
+    final repository = _FakeWorkspaceRepository(
+      permissions: const [],
+      accessError: Exception('Store access failed'),
+    );
+    final container = _buildRouterContainer(repository);
+    addTearDown(container.dispose);
+
+    final router = container.read(routerProvider);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+
+    router.go('/stores/5/inventory/checks');
     await tester.pumpAndSettle();
 
-    expect(find.text('Quản lý kho'), findsOneWidget);
-    expect(find.text('Nhập kho'), findsOneWidget);
-    expect(find.text('Xuất kho'), findsOneWidget);
-    expect(find.text('Sổ kho'), findsOneWidget);
-    expect(find.text('Kiểm kho'), findsOneWidget);
-    expect(find.text('Tồn kho'), findsOneWidget);
-    expect(find.text('In mã vạch'), findsOneWidget);
+    expect(find.text('Store access failed'), findsOneWidget);
+    expect(find.text('Bạn chưa có phiếu kiểm kho nào!'), findsNothing);
+    expect(find.text('Thử lại'), findsOneWidget);
+  });
 
-    await tester.tap(find.text('Nhập kho'));
-    await tester.pump();
+  testWidgets('stock page keeps access error state instead of mock content', (
+    tester,
+  ) async {
+    final repository = _FakeWorkspaceRepository(
+      permissions: const [],
+      accessError: Exception('Store access failed'),
+    );
+    final container = _buildRouterContainer(repository);
+    addTearDown(container.dispose);
 
-    expect(find.text('Nhập kho sẽ được triển khai sau'), findsOneWidget);
+    final router = container.read(routerProvider);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+
+    router.go('/stores/5/inventory/stock');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Store access failed'), findsOneWidget);
+    expect(find.text('Thăng Long'), findsNothing);
+    expect(find.text('Thử lại'), findsOneWidget);
   });
 
   testWidgets('store header opens switcher bottom sheet with active store', (

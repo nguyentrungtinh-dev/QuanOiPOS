@@ -12,7 +12,11 @@ import '../features/system_admin/presentation/pages/system_admin_home_page.dart'
 import '../features/store_operations/presentation/pages/operation_regulations_page.dart';
 import '../features/store_operations/presentation/pages/privacy_policy_page.dart';
 import '../features/store_operations/presentation/pages/store_home_page.dart';
+import '../features/store_operations/presentation/pages/store_inventory_check_page.dart';
+import '../features/store_operations/presentation/pages/store_inventory_import_page.dart';
+import '../features/store_operations/presentation/pages/store_inventory_ledger_page.dart';
 import '../features/store_operations/presentation/pages/store_inventory_management_page.dart';
+import '../features/store_operations/presentation/pages/store_inventory_stock_page.dart';
 import '../features/store_operations/presentation/pages/store_overview_page.dart';
 import '../features/store_operations/table_management/presentation/pages/table_management_page.dart';
 import '../features/store_operations/table_management/presentation/pages/table_settings_page.dart';
@@ -28,6 +32,10 @@ abstract final class RouteNames {
   static const String storeHome = 'store-home';
   static const String storeOverview = 'store-overview';
   static const String storeInventoryManagement = 'store-inventory-management';
+  static const String storeInventoryCheck = 'store-inventory-check';
+  static const String storeInventoryImport = 'store-inventory-import';
+  static const String storeInventoryLedger = 'store-inventory-ledger';
+  static const String storeInventoryStock = 'store-inventory-stock';
   static const String storeTableManagement = 'store-table-management';
   static const String storeTableSettings = 'store-table-settings';
   static const String myStores = 'my-stores';
@@ -77,6 +85,66 @@ final routerProvider = Provider<GoRouter>((ref) {
           }
 
           return StoreInventoryManagementPage(storeId: storeId);
+        },
+      ),
+      GoRoute(
+        path: '/stores/:storeId/inventory/stock',
+        name: RouteNames.storeInventoryStock,
+        builder: (context, state) {
+          final storeId = int.tryParse(state.pathParameters['storeId'] ?? '');
+
+          if (storeId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Cửa hàng không hợp lệ')),
+            );
+          }
+
+          return StoreInventoryStockPage(storeId: storeId);
+        },
+      ),
+      GoRoute(
+        path: '/stores/:storeId/inventory/checks',
+        name: RouteNames.storeInventoryCheck,
+        builder: (context, state) {
+          final storeId = int.tryParse(state.pathParameters['storeId'] ?? '');
+
+          if (storeId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Cửa hàng không hợp lệ')),
+            );
+          }
+
+          return StoreInventoryCheckPage(storeId: storeId);
+        },
+      ),
+      GoRoute(
+        path: '/stores/:storeId/inventory/imports',
+        name: RouteNames.storeInventoryImport,
+        builder: (context, state) {
+          final storeId = int.tryParse(state.pathParameters['storeId'] ?? '');
+
+          if (storeId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Cửa hàng không hợp lệ')),
+            );
+          }
+
+          return StoreInventoryImportPage(storeId: storeId);
+        },
+      ),
+      GoRoute(
+        path: '/stores/:storeId/inventory/ledger',
+        name: RouteNames.storeInventoryLedger,
+        builder: (context, state) {
+          final storeId = int.tryParse(state.pathParameters['storeId'] ?? '');
+
+          if (storeId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Cửa hàng không hợp lệ')),
+            );
+          }
+
+          return StoreInventoryLedgerPage(storeId: storeId);
         },
       ),
       GoRoute(
