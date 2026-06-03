@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/di/injection.dart';
+import '../../../../core/realtime/realtime_notification_service.dart';
+import '../../../../core/realtime/realtime_providers.dart';
 import '../../../../core/session/session_invalidator.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -36,6 +38,11 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 final sessionInvalidatorProvider = Provider<SessionInvalidator>((ref) {
   return locator<SessionInvalidator>();
 });
+
+final authRealtimeNotificationServiceProvider =
+    Provider<RealtimeNotificationService>((ref) {
+      return ref.watch(realtimeNotificationServiceProvider);
+    });
 
 final loginUseCaseProvider = Provider<LoginUseCase>((ref) {
   return locator<LoginUseCase>();

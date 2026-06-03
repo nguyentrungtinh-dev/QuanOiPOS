@@ -16,6 +16,7 @@ class RefreshTokenInterceptor extends Interceptor {
   final Dio dio;
   final TokenStorage tokenStorage;
   final SessionInvalidator sessionInvalidator;
+  final Future<void> Function()? onAccessTokenRefreshed;
 
   Future<String?>? _refreshAccessTokenFuture;
 
@@ -23,6 +24,7 @@ class RefreshTokenInterceptor extends Interceptor {
     required this.dio,
     required this.tokenStorage,
     required this.sessionInvalidator,
+    this.onAccessTokenRefreshed,
   });
 
   @override
@@ -111,6 +113,7 @@ class RefreshTokenInterceptor extends Interceptor {
     final newAccessToken = _extractAccessToken(response.data);
     if (newAccessToken != null && newAccessToken.isNotEmpty) {
       await tokenStorage.saveAccessToken(newAccessToken);
+      await onAccessTokenRefreshed?.call();
     }
 
     return newAccessToken;

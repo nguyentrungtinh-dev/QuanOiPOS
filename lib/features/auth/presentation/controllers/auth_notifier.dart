@@ -45,6 +45,7 @@ class AuthNotifier extends Notifier<AuthState> {
           phone: result.phone,
           sessionRestored: true,
         );
+        unawaited(ref.read(authRealtimeNotificationServiceProvider).start());
       } else {
         state = const AuthState.unauthenticated();
       }
@@ -70,6 +71,7 @@ class AuthNotifier extends Notifier<AuthState> {
         phone: result.phone,
         sessionRestored: false,
       );
+      unawaited(ref.read(authRealtimeNotificationServiceProvider).start());
     } catch (error) {
       state = state.copyWith(
         status: AuthStatus.failure,
@@ -82,6 +84,7 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> logout() async {
     final logoutUseCase = ref.read(logoutUseCaseProvider);
     await logoutUseCase();
+    await ref.read(authRealtimeNotificationServiceProvider).stop();
     state = const AuthState.unauthenticated();
   }
 
@@ -96,6 +99,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final logoutUseCase = ref.read(logoutUseCaseProvider);
       await logoutUseCase();
+      await ref.read(authRealtimeNotificationServiceProvider).stop();
     } finally {
       _sessionInvalidationStarted = false;
       state = const AuthState.unauthenticated();

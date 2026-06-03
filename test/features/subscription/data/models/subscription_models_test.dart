@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:quan_oi/core/network/dio/dio_client.dart';
 import 'package:quan_oi/features/subscription/data/datasources/subscription_remote_data_source.dart';
 import 'package:quan_oi/features/subscription/data/models/active_subscription_model.dart';
+import 'package:quan_oi/features/subscription/data/models/purchase_subscription_request_model.dart';
+import 'package:quan_oi/features/subscription/data/models/purchase_subscription_result_model.dart';
 import 'package:quan_oi/features/subscription/data/models/service_package_model.dart';
 
 void main() {
@@ -67,8 +69,27 @@ void main() {
     });
   });
 
+  group('PurchaseSubscriptionResultModel', () {
+    test('maps purchase subscription payload from backend', () {
+      final result = PurchaseSubscriptionResultModel.fromJson(
+        _purchaseSubscriptionData,
+      );
+
+      expect(result.subscriptionId, 8);
+      expect(result.paymentId, 7);
+      expect(result.orderCode, 81780473152);
+      expect(result.planName, 'Basic');
+      expect(result.amount, 10000);
+      expect(result.paymentLink, startsWith('https://pay.payos.vn'));
+      expect(result.expiresAt, isNotNull);
+
+      final entity = result.toEntity();
+      expect(entity.toPendingPurchase().paymentId, 7);
+    });
+  });
+
   group('SubscriptionRemoteDataSource', () {
-    test('loads plans from /subscription-plans', () async {
+    test('loads plans from /subscription-plans/active', () async {
       String? requestedPath;
       final dio = Dio();
       dio.interceptors.add(
@@ -94,7 +115,7 @@ void main() {
 
       final plans = await dataSource.getSubscriptionPlans();
 
-      expect(requestedPath, '/subscription-plans');
+      expect(requestedPath, '/subscription-plans/active');
       expect(plans, hasLength(3));
       expect(plans.first.name, 'Basic');
     });
@@ -155,6 +176,51 @@ void main() {
       final subscription = await dataSource.getActiveSubscription();
 
       expect(subscription, isNull);
+    });
+
+    test('purchases subscription from /subscriptions/purchase', () async {
+      String? requestedPath;
+      Object? requestedData;
+      final dio = Dio();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requestedPath = options.path;
+            requestedData = options.data;
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                data: {
+                  'succeeded': true,
+                  'message': 'Tạo link thanh toán thành công',
+                  'data': _purchaseSubscriptionData,
+                  'errors': <String>[],
+                },
+              ),
+            );
+          },
+        ),
+      );
+
+      final dataSource = SubscriptionRemoteDataSource(DioClient(dio));
+
+      final result = await dataSource.purchaseSubscription(
+        const PurchaseSubscriptionRequestModel(
+          planId: 1,
+          autoRenew: true,
+          returnUrl: 'quanoi://subscription/success',
+          cancelUrl: 'quanoi://subscription/cancel',
+        ),
+      );
+
+      expect(requestedPath, '/subscriptions/purchase');
+      expect(requestedData, {
+        'planId': 1,
+        'autoRenew': true,
+        'returnUrl': 'quanoi://subscription/success',
+        'cancelUrl': 'quanoi://subscription/cancel',
+      });
+      expect(result.paymentLink, startsWith('https://pay.payos.vn'));
     });
   });
 }
@@ -220,4 +286,16 @@ const _activeSubscriptionData = {
   'status': 'Active',
   'autoRenew': true,
   'cancelAt': null,
+};
+
+const _purchaseSubscriptionData = {
+  'subscriptionId': 8,
+  'paymentId': 7,
+  'orderCode': 81780473152,
+  'planName': 'Basic',
+  'amount': 10000,
+  'paymentLink': 'https://pay.payos.vn/web/8ce6685e37144354938711e09b77e553',
+  'daysValid': 30,
+  'maxStores': 1,
+  'expiresAt': '2026-07-03T07:52:31.95656Z',
 };

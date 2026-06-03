@@ -13,6 +13,7 @@ class DioFactory {
     required SessionInvalidator sessionInvalidator,
     required Logger logger,
     required bool enableLogging,
+    Future<void> Function()? onAccessTokenRefreshed,
   }) {
     final dio = Dio(DioOptions.build());
 
@@ -23,6 +24,7 @@ class DioFactory {
         dio: dio,
         tokenStorage: tokenStorage,
         sessionInvalidator: sessionInvalidator,
+        onAccessTokenRefreshed: onAccessTokenRefreshed,
       ),
     ]);
 

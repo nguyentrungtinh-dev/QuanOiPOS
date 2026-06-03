@@ -12,10 +12,15 @@ import 'package:quan_oi/features/workspace_context/domain/usecases/load_last_act
 import 'package:quan_oi/features/workspace_context/domain/usecases/save_last_active_store_use_case.dart';
 import 'package:quan_oi/features/workspace_context/presentation/providers/workspace_context_providers.dart';
 import 'package:quan_oi/features/subscription/domain/entities/active_subscription.dart';
+import 'package:quan_oi/features/subscription/domain/entities/pending_subscription_purchase.dart';
+import 'package:quan_oi/features/subscription/domain/entities/purchase_subscription_result.dart';
 import 'package:quan_oi/features/subscription/domain/entities/service_package.dart';
 import 'package:quan_oi/features/subscription/domain/repositories/subscription_repository.dart';
+import 'package:quan_oi/features/subscription/domain/usecases/clear_pending_subscription_purchase_use_case.dart';
 import 'package:quan_oi/features/subscription/domain/usecases/load_active_subscription_use_case.dart';
+import 'package:quan_oi/features/subscription/domain/usecases/load_pending_subscription_purchase_use_case.dart';
 import 'package:quan_oi/features/subscription/domain/usecases/load_subscription_plans_use_case.dart';
+import 'package:quan_oi/features/subscription/domain/usecases/purchase_subscription_use_case.dart';
 import 'package:quan_oi/features/subscription/presentation/providers/subscription_providers.dart';
 
 void main() {
@@ -62,13 +67,7 @@ void main() {
     expect(find.text('Quản lý kho'), findsNothing);
 
     await tester.ensureVisible(find.text('MUA GÓI'));
-    await tester.tap(find.text('MUA GÓI'));
-    await tester.pump();
-
-    expect(
-      find.text('Tính năng mua gói sẽ được triển khai sau'),
-      findsOneWidget,
-    );
+    expect(find.text('MUA GÓI'), findsOneWidget);
   });
 
   testWidgets('StoreUser sees active subscription card when subscribed', (
@@ -157,6 +156,15 @@ ProviderContainer _buildContainer(
       loadActiveSubscriptionUseCaseProvider.overrideWithValue(
         LoadActiveSubscriptionUseCase(repository),
       ),
+      purchaseSubscriptionUseCaseProvider.overrideWithValue(
+        PurchaseSubscriptionUseCase(repository),
+      ),
+      loadPendingSubscriptionPurchaseUseCaseProvider.overrideWithValue(
+        LoadPendingSubscriptionPurchaseUseCase(repository),
+      ),
+      clearPendingSubscriptionPurchaseUseCaseProvider.overrideWithValue(
+        ClearPendingSubscriptionPurchaseUseCase(repository),
+      ),
       ..._lastActiveStoreOverrides(_FakeLastActiveStoreStorage()),
     ],
   );
@@ -189,8 +197,9 @@ class _FixedAuthNotifier extends AuthNotifier {
 
 class _FakeSubscriptionRepository implements SubscriptionRepository {
   final ActiveSubscription? activeSubscription;
+  PendingSubscriptionPurchase? pendingPurchase;
 
-  const _FakeSubscriptionRepository({this.activeSubscription});
+  _FakeSubscriptionRepository({this.activeSubscription});
 
   @override
   Future<List<ServicePackage>> loadPlans() async {
@@ -217,6 +226,36 @@ class _FakeSubscriptionRepository implements SubscriptionRepository {
   @override
   Future<ActiveSubscription?> loadActiveSubscription() async {
     return activeSubscription;
+  }
+
+  @override
+  Future<PurchaseSubscriptionResult> purchaseSubscription({
+    required int planId,
+    bool autoRenew = true,
+    String? returnUrl,
+    String? cancelUrl,
+  }) async {
+    return const PurchaseSubscriptionResult(
+      subscriptionId: 3,
+      paymentId: 7,
+      orderCode: 81780473152,
+      planName: 'Pro',
+      amount: 299000,
+      paymentLink: 'https://pay.payos.vn/web/test',
+      daysValid: 30,
+      maxStores: 5,
+      expiresAt: null,
+    );
+  }
+
+  @override
+  Future<PendingSubscriptionPurchase?> loadPendingPurchase() async {
+    return pendingPurchase;
+  }
+
+  @override
+  Future<void> clearPendingPurchase() async {
+    pendingPurchase = null;
   }
 }
 

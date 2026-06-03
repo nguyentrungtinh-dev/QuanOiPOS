@@ -1,20 +1,72 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/index.dart';
 import '../../domain/entities/active_subscription.dart';
+import '../../domain/entities/pending_subscription_purchase.dart';
 import '../../domain/entities/service_package.dart';
 import '../controllers/subscription_state.dart';
 import '../providers/subscription_providers.dart';
 
-class StoreSubscriptionPage extends ConsumerWidget {
+class StoreSubscriptionPage extends ConsumerStatefulWidget {
   const StoreSubscriptionPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StoreSubscriptionPage> createState() =>
+      _StoreSubscriptionPageState();
+}
+
+class _StoreSubscriptionPageState extends ConsumerState<StoreSubscriptionPage>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final subscriptionState = ref.read(subscriptionNotifierProvider);
+      if (subscriptionState.pendingPurchase != null) {
+        unawaited(
+          ref
+              .read(subscriptionNotifierProvider.notifier)
+              .refreshAfterPaymentReturn(),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(subscriptionNotifierProvider);
+
+    ref.listen(subscriptionNotifierProvider, (previous, next) {
+      final checkoutUrl = next.checkoutUrl;
+      if (checkoutUrl != null && checkoutUrl != previous?.checkoutUrl) {
+        unawaited(context.push('/subscription-checkout', extra: checkoutUrl));
+        ref.read(subscriptionNotifierProvider.notifier).markCheckoutOpened();
+      }
+
+      final errorMessage = next.errorMessage;
+      if (errorMessage != null && errorMessage != previous?.errorMessage) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('Gói dịch vụ của tôi')),
@@ -34,6 +86,15 @@ class StoreSubscriptionPage extends ConsumerWidget {
               state: state,
               onRetry: () =>
                   ref.read(subscriptionNotifierProvider.notifier).loadPlans(),
+              onPurchase: (plan) => ref
+                  .read(subscriptionNotifierProvider.notifier)
+                  .purchasePlan(plan),
+              onContinuePayment: () => ref
+                  .read(subscriptionNotifierProvider.notifier)
+                  .continuePendingPayment(),
+              onRefreshPayment: () => ref
+                  .read(subscriptionNotifierProvider.notifier)
+                  .refreshAfterPaymentReturn(),
             ),
           },
         ),
@@ -45,8 +106,17 @@ class StoreSubscriptionPage extends ConsumerWidget {
 class _SubscriptionContent extends StatelessWidget {
   final SubscriptionState state;
   final Future<void> Function() onRetry;
+  final Future<void> Function(ServicePackage plan) onPurchase;
+  final VoidCallback onContinuePayment;
+  final Future<void> Function() onRefreshPayment;
 
-  const _SubscriptionContent({required this.state, required this.onRetry});
+  const _SubscriptionContent({
+    required this.state,
+    required this.onRetry,
+    required this.onPurchase,
+    required this.onContinuePayment,
+    required this.onRefreshPayment,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +130,16 @@ class _SubscriptionContent extends StatelessWidget {
             _ActiveSubscriptionCard(
               subscription: state.activeSubscription!,
               plan: activePlan,
+            ),
+            const SizedBox(height: AppConstants.spacingLg),
+          ],
+          if (state.pendingPurchase != null) ...[
+            _PendingPaymentCard(
+              pendingPurchase: state.pendingPurchase!,
+              isRefreshing:
+                  state.status == SubscriptionStatus.paymentCompletedRefreshing,
+              onContinuePayment: onContinuePayment,
+              onRefreshPayment: onRefreshPayment,
             ),
             const SizedBox(height: AppConstants.spacingLg),
           ],
@@ -88,6 +168,9 @@ class _SubscriptionContent extends StatelessWidget {
               child: _SubscriptionPlanCarousel(
                 plans: state.plans,
                 activeSubscription: state.activeSubscription,
+                status: state.status,
+                purchasingPlanId: state.purchasingPlanId,
+                onPurchase: onPurchase,
               ),
             ),
         ],
@@ -328,10 +411,16 @@ class _ActiveSubscriptionCard extends StatelessWidget {
 class _SubscriptionPlanCarousel extends StatefulWidget {
   final List<ServicePackage> plans;
   final ActiveSubscription? activeSubscription;
+  final SubscriptionStatus status;
+  final String? purchasingPlanId;
+  final Future<void> Function(ServicePackage plan) onPurchase;
 
   const _SubscriptionPlanCarousel({
     required this.plans,
     required this.activeSubscription,
+    required this.status,
+    required this.purchasingPlanId,
+    required this.onPurchase,
   });
 
   @override
@@ -384,6 +473,9 @@ class _SubscriptionPlanCarouselState extends State<_SubscriptionPlanCarousel> {
                 child: _ServicePackageCard(
                   package: widget.plans[index],
                   activeSubscription: widget.activeSubscription,
+                  status: widget.status,
+                  purchasingPlanId: widget.purchasingPlanId,
+                  onPurchase: widget.onPurchase,
                 ),
               );
             },
@@ -435,10 +527,16 @@ class _CarouselIndicator extends StatelessWidget {
 class _ServicePackageCard extends StatefulWidget {
   final ServicePackage package;
   final ActiveSubscription? activeSubscription;
+  final SubscriptionStatus status;
+  final String? purchasingPlanId;
+  final Future<void> Function(ServicePackage plan) onPurchase;
 
   const _ServicePackageCard({
     required this.package,
     required this.activeSubscription,
+    required this.status,
+    required this.purchasingPlanId,
+    required this.onPurchase,
   });
 
   @override
@@ -454,6 +552,19 @@ class _ServicePackageCardState extends State<_ServicePackageCard> {
 
   bool get isCurrentPlan {
     return widget.activeSubscription?.planId.toString() == package.id;
+  }
+
+  bool get hasDifferentActivePlan {
+    final subscription = widget.activeSubscription;
+    return subscription != null &&
+        subscription.isActive &&
+        !subscription.isExpired &&
+        !isCurrentPlan;
+  }
+
+  bool get isPurchasing {
+    return widget.status == SubscriptionStatus.purchasing &&
+        widget.purchasingPlanId == package.id;
   }
 
   @override
@@ -593,10 +704,23 @@ class _ServicePackageCardState extends State<_ServicePackageCard> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: package.isActive
-                      ? () => _showComingSoon(context)
+                  onPressed:
+                      package.isActive &&
+                          !hasDifferentActivePlan &&
+                          !isPurchasing
+                      ? () => widget.onPurchase(package)
                       : null,
-                  child: const Text('MUA GÓI'),
+                  child: isPurchasing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          hasDifferentActivePlan
+                              ? 'ĐANG CÓ GÓI KHÁC'
+                              : 'MUA GÓI',
+                        ),
                 ),
               ),
           ],
@@ -636,11 +760,87 @@ class _ServicePackageCardState extends State<_ServicePackageCard> {
 
     return '$value $unit';
   }
+}
 
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Tính năng mua gói sẽ được triển khai sau')),
+class _PendingPaymentCard extends StatelessWidget {
+  final PendingSubscriptionPurchase pendingPurchase;
+  final bool isRefreshing;
+  final VoidCallback onContinuePayment;
+  final Future<void> Function() onRefreshPayment;
+
+  const _PendingPaymentCard({
+    required this.pendingPurchase,
+    required this.isRefreshing,
+    required this.onContinuePayment,
+    required this.onRefreshPayment,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.spacingLg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StatusChip(label: 'ĐANG CHỜ THANH TOÁN', color: AppColors.warning),
+            const SizedBox(height: AppConstants.spacingMd),
+            Text(
+              pendingPurchase.planName,
+              style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: AppConstants.spacingSm),
+            _InlineInfo(
+              icon: Icons.receipt_long_outlined,
+              text: 'Mã đơn: ${pendingPurchase.orderCode}',
+            ),
+            const SizedBox(height: AppConstants.spacingXs),
+            _InlineInfo(
+              icon: Icons.payments_outlined,
+              text: _priceLabel(pendingPurchase.amount),
+            ),
+            if (pendingPurchase.expiresAt != null) ...[
+              const SizedBox(height: AppConstants.spacingXs),
+              _InlineInfo(
+                icon: Icons.event_outlined,
+                text:
+                    'Hiệu lực đến: ${DateFormat('dd/MM/yyyy HH:mm').format(pendingPurchase.expiresAt!.toLocal())}',
+              ),
+            ],
+            const SizedBox(height: AppConstants.spacingLg),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: isRefreshing ? null : onRefreshPayment,
+                    icon: const Icon(Icons.refresh_outlined),
+                    label: const Text('Tải lại'),
+                  ),
+                ),
+                const SizedBox(width: AppConstants.spacingMd),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: pendingPurchase.paymentLink.isEmpty
+                        ? null
+                        : onContinuePayment,
+                    icon: const Icon(Icons.payment_outlined),
+                    label: const Text('Tiếp tục'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  static String _priceLabel(double price) {
+    return NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: 'đ',
+      decimalDigits: 0,
+    ).format(price);
   }
 }
 

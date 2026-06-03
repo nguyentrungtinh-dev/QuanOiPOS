@@ -1,5 +1,7 @@
 import '../../../../core/network/dio/dio_client.dart';
 import '../models/active_subscription_model.dart';
+import '../models/purchase_subscription_request_model.dart';
+import '../models/purchase_subscription_result_model.dart';
 import '../models/service_package_model.dart';
 
 class SubscriptionRemoteDataSource {
@@ -9,7 +11,7 @@ class SubscriptionRemoteDataSource {
 
   Future<List<ServicePackageModel>> getSubscriptionPlans() async {
     final response = await _dioClient.getResponse<List<ServicePackageModel>>(
-      '/subscription-plans',
+      '/subscription-plans/active',
       dataFromJson: ServicePackageModel.listFromJson,
     );
 
@@ -40,6 +42,27 @@ class SubscriptionRemoteDataSource {
     }
 
     return response.data;
+  }
+
+  Future<PurchaseSubscriptionResultModel> purchaseSubscription(
+    PurchaseSubscriptionRequestModel request,
+  ) async {
+    final response = await _dioClient
+        .postResponse<PurchaseSubscriptionResultModel>(
+          '/subscriptions/purchase',
+          data: request.toJson(),
+          dataFromJson: PurchaseSubscriptionResultModel.fromJson,
+        );
+
+    if (!response.succeeded || response.data == null) {
+      _throwRequestFailure(
+        response.message,
+        response.errors,
+        'Purchase subscription failed',
+      );
+    }
+
+    return response.data!;
   }
 
   Never _throwRequestFailure(

@@ -10,6 +10,8 @@ import '../storage/last_active_store_storage.dart';
 import '../storage/last_active_store_storage_impl.dart';
 import '../network/dio/dio_factory.dart';
 import '../network/dio/dio_client.dart';
+import '../realtime/realtime_notification_service.dart';
+import '../realtime/signalr_realtime_notification_service.dart';
 import '../session/session_invalidator.dart';
 import 'package:dio/dio.dart';
 import '../../features/auth/data/datasources/auth_remote_data_source.dart';
@@ -26,10 +28,15 @@ import '../../features/auth/domain/usecases/confirm_registration_use_case.dart';
 import '../../features/auth/domain/usecases/forgot_password_use_case.dart';
 import '../../features/auth/domain/usecases/confirm_forgot_password_use_case.dart';
 import '../../features/subscription/data/datasources/subscription_remote_data_source.dart';
+import '../../features/subscription/data/datasources/subscription_pending_purchase_storage.dart';
+import '../../features/subscription/data/datasources/subscription_pending_purchase_storage_impl.dart';
 import '../../features/subscription/data/repositories/subscription_repository_impl.dart';
 import '../../features/subscription/domain/repositories/subscription_repository.dart';
+import '../../features/subscription/domain/usecases/clear_pending_subscription_purchase_use_case.dart';
 import '../../features/subscription/domain/usecases/load_active_subscription_use_case.dart';
+import '../../features/subscription/domain/usecases/load_pending_subscription_purchase_use_case.dart';
 import '../../features/subscription/domain/usecases/load_subscription_plans_use_case.dart';
+import '../../features/subscription/domain/usecases/purchase_subscription_use_case.dart';
 import '../../features/store_operations/table_management/data/datasources/table_management_remote_data_source.dart';
 import '../../features/store_operations/table_management/data/repositories/table_management_repository_impl.dart';
 import '../../features/store_operations/table_management/domain/repositories/table_management_repository.dart';
@@ -82,12 +89,29 @@ Future<void> setupDependencies({bool enableLogging = false}) async {
     dispose: (sessionInvalidator) => sessionInvalidator.dispose(),
   );
 
+  // Realtime notifications
+  locator.registerLazySingleton<RealtimeNotificationService>(
+    () => SignalRRealtimeNotificationService(
+      tokenStorage: locator<TokenStorage>(),
+      logger: locator<Logger>(),
+    ),
+    dispose: (service) async {
+      if (service is SignalRRealtimeNotificationService) {
+        await service.dispose();
+      } else {
+        await service.stop();
+      }
+    },
+  );
+
   // Dio
   final dio = DioFactory.createDio(
     tokenStorage: locator<TokenStorage>(),
     sessionInvalidator: locator<SessionInvalidator>(),
     logger: locator<Logger>(),
     enableLogging: enableLogging,
+    onAccessTokenRefreshed: () =>
+        locator<RealtimeNotificationService>().restart(),
   );
 
   locator.registerLazySingleton<Dio>(() => dio);
@@ -139,14 +163,33 @@ Future<void> setupDependencies({bool enableLogging = false}) async {
   locator.registerLazySingleton<SubscriptionRemoteDataSource>(
     () => SubscriptionRemoteDataSource(locator<DioClient>()),
   );
+  locator.registerLazySingleton<SubscriptionPendingPurchaseStorage>(
+    () => SubscriptionPendingPurchaseStorageImpl(locator<SharedPreferences>()),
+  );
   locator.registerLazySingleton<SubscriptionRepository>(
-    () => SubscriptionRepositoryImpl(locator<SubscriptionRemoteDataSource>()),
+    () => SubscriptionRepositoryImpl(
+      locator<SubscriptionRemoteDataSource>(),
+      locator<SubscriptionPendingPurchaseStorage>(),
+    ),
   );
   locator.registerLazySingleton<LoadSubscriptionPlansUseCase>(
     () => LoadSubscriptionPlansUseCase(locator<SubscriptionRepository>()),
   );
   locator.registerLazySingleton<LoadActiveSubscriptionUseCase>(
     () => LoadActiveSubscriptionUseCase(locator<SubscriptionRepository>()),
+  );
+  locator.registerLazySingleton<PurchaseSubscriptionUseCase>(
+    () => PurchaseSubscriptionUseCase(locator<SubscriptionRepository>()),
+  );
+  locator.registerLazySingleton<LoadPendingSubscriptionPurchaseUseCase>(
+    () => LoadPendingSubscriptionPurchaseUseCase(
+      locator<SubscriptionRepository>(),
+    ),
+  );
+  locator.registerLazySingleton<ClearPendingSubscriptionPurchaseUseCase>(
+    () => ClearPendingSubscriptionPurchaseUseCase(
+      locator<SubscriptionRepository>(),
+    ),
   );
 
   // Workspace context

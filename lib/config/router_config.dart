@@ -25,6 +25,7 @@ import '../features/store_operations/presentation/pages/store_overview_page.dart
 import '../features/store_operations/table_management/presentation/pages/table_management_page.dart';
 import '../features/store_operations/table_management/presentation/pages/table_settings_page.dart';
 import '../features/subscription/presentation/pages/store_subscription_page.dart';
+import '../features/subscription/presentation/pages/subscription_checkout_page.dart';
 import '../features/workspace_context/presentation/controllers/last_active_store_state.dart';
 import '../features/workspace_context/presentation/pages/my_stores_page.dart';
 import '../features/workspace_context/presentation/providers/workspace_context_providers.dart';
@@ -44,6 +45,7 @@ abstract final class RouteNames {
   static const String storeTableSettings = 'store-table-settings';
   static const String myStores = 'my-stores';
   static const String storeSubscription = 'store-subscription';
+  static const String subscriptionCheckout = 'subscription-checkout';
   static const String appSettings = 'app-settings';
   static const String operationRegulations = 'operation-regulations';
   static const String privacyPolicy = 'privacy-policy';
@@ -206,6 +208,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const StoreSubscriptionPage(),
       ),
       GoRoute(
+        path: '/subscription-checkout',
+        name: RouteNames.subscriptionCheckout,
+        builder: (context, state) {
+          final paymentLink = state.extra;
+          if (paymentLink is! String || paymentLink.trim().isEmpty) {
+            return const Scaffold(
+              body: Center(child: Text('Link thanh toán không hợp lệ')),
+            );
+          }
+
+          return SubscriptionCheckoutPage(paymentLink: paymentLink);
+        },
+      ),
+      GoRoute(
         path: '/app-settings',
         name: RouteNames.appSettings,
         builder: (context, state) => const AppSettingsPage(),
@@ -277,6 +293,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (authState.accountType == AccountType.systemAdmin) {
         if (state.matchedLocation == '/store-home' ||
             state.matchedLocation == '/store-subscription' ||
+            state.matchedLocation == '/subscription-checkout' ||
             state.matchedLocation == '/app-settings' ||
             state.matchedLocation == '/operation-regulations' ||
             state.matchedLocation == '/privacy-policy' ||

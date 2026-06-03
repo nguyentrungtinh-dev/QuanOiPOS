@@ -138,6 +138,12 @@ dependencies:
   # REALTIME / SOCKET
   # =========================
   socket_io_client: ^3.1.2
+  signalr_netcore: ^1.4.4
+
+  # =========================
+  # WEBVIEW / CHECKOUT
+  # =========================
+  webview_flutter: ^4.10.0
 
   # =========================
   # ENVIRONMENT

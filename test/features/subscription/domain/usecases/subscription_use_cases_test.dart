@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quan_oi/features/subscription/domain/entities/active_subscription.dart';
+import 'package:quan_oi/features/subscription/domain/entities/pending_subscription_purchase.dart';
+import 'package:quan_oi/features/subscription/domain/entities/purchase_subscription_result.dart';
 import 'package:quan_oi/features/subscription/domain/entities/service_package.dart';
 import 'package:quan_oi/features/subscription/domain/repositories/subscription_repository.dart';
 import 'package:quan_oi/features/subscription/domain/usecases/load_active_subscription_use_case.dart';
@@ -71,4 +73,32 @@ class _FakeSubscriptionRepository implements SubscriptionRepository {
       cancelAt: null,
     );
   }
+
+  @override
+  Future<PurchaseSubscriptionResult> purchaseSubscription({
+    required int planId,
+    bool autoRenew = true,
+    String? returnUrl,
+    String? cancelUrl,
+  }) async {
+    return const PurchaseSubscriptionResult(
+      subscriptionId: 1,
+      paymentId: 7,
+      orderCode: 81780473152,
+      planName: 'Basic',
+      amount: 99000,
+      paymentLink: 'https://pay.payos.vn/web/test',
+      daysValid: 30,
+      maxStores: 1,
+      expiresAt: null,
+    );
+  }
+
+  @override
+  Future<PendingSubscriptionPurchase?> loadPendingPurchase() async {
+    return null;
+  }
+
+  @override
+  Future<void> clearPendingPurchase() async {}
 }
