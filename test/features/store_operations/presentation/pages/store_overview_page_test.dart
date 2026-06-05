@@ -194,6 +194,29 @@ void main() {
       expect(find.text('Đã thanh toán'), findsWidgets);
       expect(find.text('Tạo nhập hàng'), findsOneWidget);
       expect(find.byIcon(Icons.file_download_outlined), findsOneWidget);
+
+      await tester.tap(find.text('Tạo nhập hàng'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nhập sản phẩm'), findsOneWidget);
+      expect(find.text('Nhập nguyên liệu'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const Key('inventory_import_create_menu_backdrop')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nhập sản phẩm'), findsNothing);
+
+      await tester.tap(find.text('Tạo nhập hàng'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nhập sản phẩm'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Nhập sản phẩm sẽ được triển khai sau'),
+        findsOneWidget,
+      );
     },
   );
 
