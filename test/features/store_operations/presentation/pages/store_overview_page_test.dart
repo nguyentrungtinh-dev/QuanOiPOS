@@ -294,6 +294,80 @@ void main() {
     },
   );
 
+  testWidgets('inventory import ingredient action opens mock ingredient flow', (
+    tester,
+  ) async {
+    final repository = const _FakeWorkspaceRepository(
+      permissions: [StorePermission(permissionId: 1, code: 'DASHBOARD.VIEW')],
+    );
+    final container = _buildRouterContainer(repository);
+    addTearDown(container.dispose);
+
+    final router = container.read(routerProvider);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+
+    router.go('/stores/5/inventory/imports');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('inventory_import_import_ingredient_action')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nhập nguyên liệu'), findsOneWidget);
+    expect(find.text('Nguyên liệu'), findsOneWidget);
+    expect(find.text('Nhóm nguyên liệu'), findsOneWidget);
+    expect(find.text('Đường'), findsOneWidget);
+    expect(find.text('NL0001  |  Còn: 12 kg'), findsOneWidget);
+    expect(find.text('Tiếp tục'), findsNothing);
+
+    await tester.tap(
+      find.byKey(const Key('inventory_import_ingredient_add_NL0001')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('inventory_import_ingredient_stepper_NL0001')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('inventory_import_ingredient_quantity_NL0001')),
+      findsOneWidget,
+    );
+    expect(find.text('1 NL'), findsOneWidget);
+    expect(find.text('Tiếp tục'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const Key('inventory_import_ingredients_continue_action')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tạo nhập nguyên liệu'), findsOneWidget);
+    expect(find.text('Chọn nhà cung cấp'), findsOneWidget);
+    expect(find.text('+ Thêm nguyên liệu'), findsOneWidget);
+    expect(find.text('Đường'), findsOneWidget);
+    expect(
+      find.byKey(const Key('inventory_import_ingredient_price_NL0001')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const Key('inventory_import_ingredient_quantity_draft_NL0001'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Tổng số lượng'), findsOneWidget);
+    expect(find.text('Tổng cộng'), findsOneWidget);
+    expect(find.text('Nhập nguyên liệu'), findsOneWidget);
+  });
+
   testWidgets(
     'inventory ledger tile navigates to mock ledger page without permission',
     (tester) async {
@@ -388,6 +462,32 @@ void main() {
 
     expect(find.text('Store access failed'), findsOneWidget);
     expect(find.text('#NH265'), findsNothing);
+    expect(find.text('Thử lại'), findsOneWidget);
+  });
+
+  testWidgets('inventory import ingredients page keeps access error state', (
+    tester,
+  ) async {
+    final repository = _FakeWorkspaceRepository(
+      permissions: const [],
+      accessError: Exception('Store access failed'),
+    );
+    final container = _buildRouterContainer(repository);
+    addTearDown(container.dispose);
+
+    final router = container.read(routerProvider);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+
+    router.go('/stores/5/inventory/imports/ingredients');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Store access failed'), findsOneWidget);
+    expect(find.text('Đường'), findsNothing);
     expect(find.text('Thử lại'), findsOneWidget);
   });
 

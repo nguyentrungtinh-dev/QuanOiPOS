@@ -483,7 +483,10 @@ Future<void> _showInventoryImportCreateMenu(
       return;
     }
 
-    _showComingSoon(context, selectedAction.label);
+    context.goNamed(
+      RouteNames.storeInventoryImportIngredients,
+      pathParameters: {'storeId': storeId.toString()},
+    );
   }
 }
 
