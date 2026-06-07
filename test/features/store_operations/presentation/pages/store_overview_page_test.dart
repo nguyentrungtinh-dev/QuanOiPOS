@@ -218,6 +218,91 @@ void main() {
     },
   );
 
+  testWidgets('inventory stock FAB opens create menu and routes actions', (
+    tester,
+  ) async {
+    final repository = const _FakeWorkspaceRepository(
+      permissions: [StorePermission(permissionId: 1, code: 'DASHBOARD.VIEW')],
+    );
+    final container = _buildRouterContainer(repository);
+    addTearDown(container.dispose);
+
+    final router = container.read(routerProvider);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+
+    router.go('/stores/5/inventory/stock');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('In tem mã vạch'), findsOneWidget);
+    expect(find.text('Tạo xuất hàng'), findsOneWidget);
+    expect(find.text('Tạo kiểm kho'), findsOneWidget);
+    expect(find.text('Tạo nhập hàng'), findsOneWidget);
+    expect(find.text('Tạo sản phẩm'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const Key('inventory_stock_create_menu_backdrop')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('In tem mã vạch'), findsNothing);
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('In tem mã vạch'));
+    await tester.pumpAndSettle();
+
+    expect(router.state.matchedLocation, '/stores/5/inventory/stock');
+    expect(find.text('In tem mã vạch sẽ được triển khai sau'), findsOneWidget);
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tạo xuất hàng'));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.state.matchedLocation,
+      '/stores/5/inventory/exports/products',
+    );
+
+    router.go('/stores/5/inventory/stock');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tạo kiểm kho'));
+    await tester.pumpAndSettle();
+
+    expect(router.state.matchedLocation, '/stores/5/inventory/checks/create');
+
+    router.go('/stores/5/inventory/stock');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tạo nhập hàng'));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.state.matchedLocation,
+      '/stores/5/inventory/imports/products',
+    );
+
+    router.go('/stores/5/inventory/stock');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tạo sản phẩm'));
+    await tester.pumpAndSettle();
+
+    expect(router.state.matchedLocation, '/stores/5/products/new');
+  });
+
   testWidgets(
     'inventory import tile navigates to mock import page without permission',
     (tester) async {
@@ -1323,6 +1408,7 @@ void main() {
 
     expect(find.text('Store access failed'), findsOneWidget);
     expect(find.text('Thăng Long'), findsNothing);
+    expect(find.byType(FloatingActionButton), findsNothing);
     expect(find.text('Thử lại'), findsOneWidget);
   });
 

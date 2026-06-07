@@ -22,9 +22,10 @@ class StoreInventoryStockPage extends ConsumerWidget {
       backgroundColor: AppColors.background,
       floatingActionButton: accessState.status == StoreAccessStatus.ready
           ? FloatingActionButton(
-              onPressed: () => _showComingSoon(context, 'Thêm tồn kho'),
+              onPressed: () => _showInventoryStockCreateMenu(context, storeId),
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.surface,
+              tooltip: 'Tạo nhanh',
               child: const Icon(Icons.add_rounded),
             )
           : null,
@@ -421,6 +422,208 @@ class _LoadingView extends StatelessWidget {
     return const ColoredBox(
       color: AppColors.background,
       child: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+enum _InventoryStockCreateAction {
+  barcode(
+    icon: Icons.print_outlined,
+    label: 'In tem mã vạch',
+    key: Key('inventory_stock_print_barcode_action'),
+  ),
+  exportProduct(
+    icon: Icons.upload_rounded,
+    label: 'Tạo xuất hàng',
+    key: Key('inventory_stock_create_export_action'),
+  ),
+  check(
+    icon: Icons.fact_check_outlined,
+    label: 'Tạo kiểm kho',
+    key: Key('inventory_stock_create_check_action'),
+  ),
+  importProduct(
+    icon: Icons.download_rounded,
+    label: 'Tạo nhập hàng',
+    key: Key('inventory_stock_create_import_action'),
+  ),
+  product(
+    icon: Icons.inventory_2_outlined,
+    label: 'Tạo sản phẩm',
+    key: Key('inventory_stock_create_product_action'),
+  );
+
+  final IconData icon;
+  final String label;
+  final Key key;
+
+  const _InventoryStockCreateAction({
+    required this.icon,
+    required this.label,
+    required this.key,
+  });
+}
+
+Future<void> _showInventoryStockCreateMenu(
+  BuildContext context,
+  int storeId,
+) async {
+  final selectedAction = await showGeneralDialog<_InventoryStockCreateAction>(
+    context: context,
+    barrierColor: AppColors.overlay,
+    barrierDismissible: true,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    transitionDuration: AppConstants.animFast,
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return const _InventoryStockCreateMenuOverlay();
+    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: child,
+      );
+    },
+  );
+
+  if (selectedAction == null || !context.mounted) {
+    return;
+  }
+
+  switch (selectedAction) {
+    case _InventoryStockCreateAction.barcode:
+      _showComingSoon(context, 'In tem mã vạch');
+    case _InventoryStockCreateAction.exportProduct:
+      context.goNamed(
+        RouteNames.storeInventoryExportProducts,
+        pathParameters: {'storeId': storeId.toString()},
+      );
+    case _InventoryStockCreateAction.check:
+      context.goNamed(
+        RouteNames.storeInventoryCheckCreate,
+        pathParameters: {'storeId': storeId.toString()},
+      );
+    case _InventoryStockCreateAction.importProduct:
+      context.goNamed(
+        RouteNames.storeInventoryImportProducts,
+        pathParameters: {'storeId': storeId.toString()},
+      );
+    case _InventoryStockCreateAction.product:
+      context.goNamed(
+        RouteNames.storeProductCreate,
+        pathParameters: {'storeId': storeId.toString()},
+      );
+  }
+}
+
+class _InventoryStockCreateMenuOverlay extends StatelessWidget {
+  const _InventoryStockCreateMenuOverlay();
+
+  static const double _pageMaxWidth = 560;
+  static const double _menuWidth = 240;
+  static const double _fabClearance = 88;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final pageInset = constraints.maxWidth > _pageMaxWidth
+              ? (constraints.maxWidth - _pageMaxWidth) / 2
+              : 0.0;
+          final rightInset = pageInset + AppConstants.spacingMd;
+          final bottomInset =
+              MediaQuery.paddingOf(context).bottom + _fabClearance;
+
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  key: const Key('inventory_stock_create_menu_backdrop'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(context).pop(),
+                ),
+              ),
+              Positioned(
+                right: rightInset,
+                bottom: bottomInset,
+                child: const _InventoryStockCreateMenu(width: _menuWidth),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _InventoryStockCreateMenu extends StatelessWidget {
+  final double width;
+
+  const _InventoryStockCreateMenu({required this.width});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('inventory_stock_create_menu'),
+      width: width,
+      padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingSm),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.14),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final action in _InventoryStockCreateAction.values)
+            _InventoryStockCreateMenuItem(action: action),
+        ],
+      ),
+    );
+  }
+}
+
+class _InventoryStockCreateMenuItem extends StatelessWidget {
+  final _InventoryStockCreateAction action;
+
+  const _InventoryStockCreateMenuItem({required this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: action.key,
+      onTap: () => Navigator.of(context).pop(action),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.spacingMd,
+          vertical: AppConstants.spacingSm,
+        ),
+        child: Row(
+          children: [
+            Icon(action.icon, color: AppColors.primary, size: 22),
+            const SizedBox(width: AppConstants.spacingMd),
+            Expanded(
+              child: Text(
+                action.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.labelSm.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
