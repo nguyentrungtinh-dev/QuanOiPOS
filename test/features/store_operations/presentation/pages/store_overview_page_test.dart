@@ -459,6 +459,56 @@ void main() {
 
       expect(find.text('2 SP'), findsOneWidget);
       expect(find.text('Tiếp tục'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const Key('inventory_export_product_add_SP0082')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('3 SP'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const Key('inventory_export_products_continue_action')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(router.state.matchedLocation, '/stores/5/inventory/exports/draft');
+      expect(find.text('Tạo phiếu xuất hàng'), findsOneWidget);
+      expect(find.text('Thêm sản phẩm'), findsOneWidget);
+      expect(find.text('Revive'), findsOneWidget);
+      expect(find.text('SP0098'), findsOneWidget);
+      expect(find.text('Tổng số lượng'), findsOneWidget);
+      expect(find.text('Tổng cộng'), findsOneWidget);
+      expect(find.text('Hoàn thành'), findsOneWidget);
+      expect(find.text('Nguyên vật liệu'), findsNothing);
+      expect(find.text('Lưu phiếu'), findsNothing);
+      final totalQuantityText = tester.widget<Text>(
+        find.byKey(const Key('inventory_export_draft_total_quantity')),
+      );
+      final productCountText = tester.widget<Text>(
+        find.byKey(const Key('inventory_export_draft_product_count')),
+      );
+      expect(totalQuantityText.data, '3');
+      expect(productCountText.data, '2');
+
+      await tester.tap(
+        find.byKey(const Key('inventory_export_draft_add_product_action')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        router.state.matchedLocation,
+        '/stores/5/inventory/exports/products',
+      );
+      expect(
+        find.byKey(const Key('inventory_export_product_stepper_SP0098')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('inventory_export_product_stepper_SP0082')),
+        findsOneWidget,
+      );
+      expect(find.text('3 SP'), findsOneWidget);
     },
   );
 
@@ -680,6 +730,32 @@ void main() {
 
     expect(find.text('Store access failed'), findsOneWidget);
     expect(find.text('Revive'), findsNothing);
+    expect(find.text('Thử lại'), findsOneWidget);
+  });
+
+  testWidgets('inventory export draft page keeps access error state', (
+    tester,
+  ) async {
+    final repository = _FakeWorkspaceRepository(
+      permissions: const [],
+      accessError: Exception('Store access failed'),
+    );
+    final container = _buildRouterContainer(repository);
+    addTearDown(container.dispose);
+
+    final router = container.read(routerProvider);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+
+    router.go('/stores/5/inventory/exports/draft');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Store access failed'), findsOneWidget);
+    expect(find.text('Tạo phiếu xuất hàng'), findsNothing);
     expect(find.text('Thử lại'), findsOneWidget);
   });
 

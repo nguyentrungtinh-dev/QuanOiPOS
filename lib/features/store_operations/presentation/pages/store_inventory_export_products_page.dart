@@ -8,11 +8,17 @@ import '../../../../core/theme/index.dart';
 import '../../../workspace_context/presentation/controllers/store_access_state.dart';
 import '../../../workspace_context/presentation/providers/workspace_context_providers.dart';
 import '../providers/store_inventory_export_products_mock_provider.dart';
+import 'store_inventory_export_draft_page.dart';
 
 class StoreInventoryExportProductsPage extends ConsumerWidget {
   final int storeId;
+  final StoreInventoryExportDraftSeedData? seedData;
 
-  const StoreInventoryExportProductsPage({super.key, required this.storeId});
+  const StoreInventoryExportProductsPage({
+    super.key,
+    required this.storeId,
+    this.seedData,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +49,10 @@ class StoreInventoryExportProductsPage extends ConsumerWidget {
                 .read(storeAccessNotifierProvider(storeId).notifier)
                 .loadAccess(),
           ),
-          StoreAccessStatus.ready => _ReadyView(storeId: storeId),
+          StoreAccessStatus.ready => _ReadyView(
+            storeId: storeId,
+            seedData: seedData,
+          ),
         },
       ),
     );
@@ -52,8 +61,9 @@ class StoreInventoryExportProductsPage extends ConsumerWidget {
 
 class _ReadyView extends ConsumerStatefulWidget {
   final int storeId;
+  final StoreInventoryExportDraftSeedData? seedData;
 
-  const _ReadyView({required this.storeId});
+  const _ReadyView({required this.storeId, this.seedData});
 
   @override
   ConsumerState<_ReadyView> createState() => _ReadyViewState();
@@ -61,6 +71,15 @@ class _ReadyView extends ConsumerStatefulWidget {
 
 class _ReadyViewState extends ConsumerState<_ReadyView> {
   final Map<String, int> _quantitiesBySku = {};
+
+  @override
+  void initState() {
+    super.initState();
+    final seedData = widget.seedData;
+    if (seedData != null) {
+      _quantitiesBySku.addAll(seedData.quantitiesBySku);
+    }
+  }
 
   int get _totalSelectedQuantity {
     return _quantitiesBySku.values.fold(
@@ -91,6 +110,16 @@ class _ReadyViewState extends ConsumerState<_ReadyView> {
 
       _quantitiesBySku[product.sku] = currentQuantity - 1;
     });
+  }
+
+  void _showDraft() {
+    context.goNamed(
+      RouteNames.storeInventoryExportDraft,
+      pathParameters: {'storeId': widget.storeId.toString()},
+      extra: StoreInventoryExportDraftSeedData(
+        quantitiesBySku: Map.unmodifiable(_quantitiesBySku),
+      ),
+    );
   }
 
   @override
@@ -142,7 +171,7 @@ class _ReadyViewState extends ConsumerState<_ReadyView> {
               if (hasSelection)
                 _ExportProductsBottomActionBar(
                   selectedQuantity: totalSelectedQuantity,
-                  onContinue: () => _showComingSoon(context, 'Tiếp tục'),
+                  onContinue: _showDraft,
                 ),
             ],
           ),

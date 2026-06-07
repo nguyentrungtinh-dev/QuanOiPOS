@@ -16,6 +16,7 @@ import '../features/store_operations/presentation/pages/app_settings_page.dart';
 import '../features/store_operations/presentation/pages/operation_regulations_page.dart';
 import '../features/store_operations/presentation/pages/privacy_policy_page.dart';
 import '../features/store_operations/presentation/pages/store_feature_search_page.dart';
+import '../features/store_operations/presentation/pages/store_inventory_export_draft_page.dart';
 import '../features/store_operations/presentation/pages/store_inventory_export_page.dart';
 import '../features/store_operations/presentation/pages/store_inventory_export_products_page.dart';
 import '../features/store_operations/presentation/pages/store_home_page.dart';
@@ -53,6 +54,8 @@ abstract final class RouteNames {
   static const String storeInventoryManagement = 'store-inventory-management';
   static const String storeInventoryCheck = 'store-inventory-check';
   static const String storeInventoryExport = 'store-inventory-export';
+  static const String storeInventoryExportDraft =
+      'store-inventory-export-draft';
   static const String storeInventoryExportProducts =
       'store-inventory-export-products';
   static const String storeInventoryImport = 'store-inventory-import';
@@ -261,7 +264,36 @@ final routerProvider = Provider<GoRouter>((ref) {
             );
           }
 
-          return StoreInventoryExportProductsPage(storeId: storeId);
+          final seedData = state.extra is StoreInventoryExportDraftSeedData
+              ? state.extra! as StoreInventoryExportDraftSeedData
+              : null;
+
+          return StoreInventoryExportProductsPage(
+            storeId: storeId,
+            seedData: seedData,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/stores/:storeId/inventory/exports/draft',
+        name: RouteNames.storeInventoryExportDraft,
+        builder: (context, state) {
+          final storeId = int.tryParse(state.pathParameters['storeId'] ?? '');
+
+          if (storeId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Cửa hàng không hợp lệ')),
+            );
+          }
+
+          final seedData = state.extra is StoreInventoryExportDraftSeedData
+              ? state.extra! as StoreInventoryExportDraftSeedData
+              : null;
+
+          return StoreInventoryExportDraftPage(
+            storeId: storeId,
+            seedData: seedData,
+          );
         },
       ),
       GoRoute(
