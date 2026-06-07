@@ -22,7 +22,10 @@ class StoreInventoryExportPage extends ConsumerWidget {
       backgroundColor: AppColors.background,
       floatingActionButton: accessState.status == StoreAccessStatus.ready
           ? FloatingActionButton.extended(
-              onPressed: () => _showComingSoon(context, 'Tạo xuất hàng'),
+              onPressed: () => context.goNamed(
+                RouteNames.storeInventoryExportProducts,
+                pathParameters: {'storeId': storeId.toString()},
+              ),
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.surface,
               icon: const Icon(Icons.add_rounded),
