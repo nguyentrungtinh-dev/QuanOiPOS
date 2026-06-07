@@ -75,7 +75,6 @@ class _ReadyView extends ConsumerWidget {
         child: Column(
           children: [
             _InventoryStockHeader(storeId: storeId),
-            const _InventoryStockTabs(),
             const _InventoryStockFilters(),
             const _InventoryStockSummary(
               totalQuantity: 158,
@@ -160,75 +159,6 @@ class _InventorySearchField extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(
             horizontal: AppConstants.spacingSm,
             vertical: AppConstants.spacingSm,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InventoryStockTabs extends StatelessWidget {
-  const _InventoryStockTabs();
-
-  static const _tabs = ['Sản phẩm', 'Tồn kho', 'Bán kèm', 'Danh mục'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.surface,
-      child: Row(
-        children: [
-          for (final tab in _tabs)
-            Expanded(
-              child: _InventoryStockTab(
-                label: tab,
-                isSelected: tab == 'Tồn kho',
-                onTap: tab == 'Tồn kho'
-                    ? null
-                    : () => _showComingSoon(context, tab),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InventoryStockTab extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback? onTap;
-
-  const _InventoryStockTab({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isSelected ? AppColors.primary : AppColors.textMuted;
-
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingSm),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: isSelected ? AppColors.primary : AppColors.border,
-              width: isSelected ? 2.5 : 1,
-            ),
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.labelSm.copyWith(
-            color: color,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
       ),

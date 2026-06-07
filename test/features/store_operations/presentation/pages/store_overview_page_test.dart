@@ -197,9 +197,11 @@ void main() {
       await tester.tap(find.text('Tồn kho'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Tồn kho'), findsOneWidget);
       expect(find.text('Tìm tên, mã SKU, ...'), findsOneWidget);
-      expect(find.text('Danh mục'), findsWidgets);
+      expect(find.text('Sản phẩm'), findsNothing);
+      expect(find.text('Tồn kho'), findsNothing);
+      expect(find.text('Bán kèm'), findsNothing);
+      expect(find.text('Danh mục'), findsOneWidget);
       expect(find.text('Trạng thái'), findsOneWidget);
       expect(find.text('Sắp xếp'), findsOneWidget);
       expect(
