@@ -14,11 +14,15 @@ void main() {
   });
 
   test('apiBaseUrl appends api to root base url', () {
-    dotenv.testLoad(fileInput: 'BASE_URL=http://localhost:5186');
+    dotenv.testLoad(
+      fileInput:
+          'BASE_URL=http://localhost:5186\nVOICE_API_BASE_URL=http://localhost:8000',
+    );
 
     expect(Env.baseUrl, 'http://localhost:5186');
     expect(Env.apiBaseUrl, 'http://localhost:5186/api');
     expect(Env.notificationsHubUrl, 'http://localhost:5186/hubs/notifications');
+    expect(Env.voiceApiBaseUrl, 'http://localhost:8000');
   });
 
   test('apiBaseUrl avoids double slash when base url has trailing slash', () {

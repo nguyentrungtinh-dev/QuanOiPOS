@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class Env {
@@ -9,17 +8,20 @@ class Env {
   static String get notificationsHubUrl =>
       _appendPath(baseUrl, 'hubs/notifications');
 
+  static String get voiceApiBaseUrl =>
+      _normalizeBaseUrl(dotenv.env['VOICE_API_BASE_URL'] ?? '');
+
   static String _normalizeBaseUrl(String rawBaseUrl) {
     if (rawBaseUrl.isEmpty) return rawBaseUrl;
 
     final uri = Uri.tryParse(rawBaseUrl);
     if (uri == null || !uri.hasAuthority) return rawBaseUrl;
 
-    if (!kIsWeb &&
-        defaultTargetPlatform == TargetPlatform.android &&
-        (uri.host == 'localhost' || uri.host == '127.0.0.1')) {
-      return uri.replace(host: '10.0.2.2').toString();
-    }
+    // if (!kIsWeb &&
+    //     defaultTargetPlatform == TargetPlatform.android &&
+    //     (uri.host == 'localhost' || uri.host == '127.0.0.1')) {
+    //   return uri.replace(host: '10.0.2.2').toString();
+    // }
 
     return rawBaseUrl;
   }

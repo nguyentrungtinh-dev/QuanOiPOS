@@ -8,9 +8,13 @@ class VoiceOrderRepositoryImpl implements VoiceOrderRepository {
   const VoiceOrderRepositoryImpl(this._remoteDataSource);
 
   @override
-  Future<VoiceOrderRecognition> recognizeAudioFile(String audioFilePath) async {
+  Future<VoiceOrderRecognition> recognizeAudioFile({
+    required String audioFilePath,
+    required int storeId,
+  }) async {
     final recognition = await _remoteDataSource.recognizeAudioFile(
-      audioFilePath,
+      audioFilePath: audioFilePath,
+      storeId: storeId,
     );
     return recognition.toEntity();
   }

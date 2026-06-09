@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:record_mp3_plus/record_mp3_plus.dart';
+import 'package:record/record.dart';
 
 abstract class VoiceOrderAudioRecorder {
   Future<String> start();
@@ -30,9 +30,13 @@ class VoiceOrderRecorderException implements Exception {
   String toString() => message;
 }
 
-class RecordMp3VoiceOrderAudioRecorder implements VoiceOrderAudioRecorder {
+class RecordVoiceOrderAudioRecorder implements VoiceOrderAudioRecorder {
+  final AudioRecorder _recorder;
   String? _currentPath;
   String? _lastPath;
+
+  RecordVoiceOrderAudioRecorder({AudioRecorder? recorder})
+    : _recorder = recorder ?? AudioRecorder();
 
   @override
   Future<String> start() async {
@@ -43,18 +47,19 @@ class RecordMp3VoiceOrderAudioRecorder implements VoiceOrderAudioRecorder {
 
     final directory = await getTemporaryDirectory();
     final filePath =
-        '${directory.path}/voice_order_${DateTime.now().millisecondsSinceEpoch}.mp3';
+        '${directory.path}/voice_order_${DateTime.now().millisecondsSinceEpoch}.wav';
 
-    String? recordError;
-    final didStart = RecordMp3.instance.start(filePath, (error) {
-      recordError = error.toString();
-    });
-
-    if (!didStart) {
-      throw VoiceOrderRecorderException(
-        recordError ?? 'Không thể bắt đầu ghi âm.',
-      );
-    }
+    await _recorder.start(
+      const RecordConfig(
+        encoder: AudioEncoder.wav,
+        sampleRate: 16000,
+        numChannels: 1,
+        echoCancel: true,
+        noiseSuppress: true,
+        autoGain: true,
+      ),
+      path: filePath,
+    );
 
     _currentPath = filePath;
     _lastPath = filePath;
@@ -63,26 +68,32 @@ class RecordMp3VoiceOrderAudioRecorder implements VoiceOrderAudioRecorder {
 
   @override
   Future<String?> stop() async {
-    final filePath = _currentPath;
-    if (filePath == null) {
+    if (_currentPath == null) {
       return null;
     }
 
-    final didStop = RecordMp3.instance.stop();
+    final stoppedPath = await _recorder.stop();
     _currentPath = null;
 
-    if (!didStop) {
+    if (stoppedPath == null || stoppedPath.isEmpty) {
       throw const VoiceOrderRecorderException('Không thể dừng ghi âm.');
     }
 
-    return filePath;
+    final file = File(stoppedPath);
+    if (!await file.exists() || await file.length() <= 44) {
+      throw const VoiceOrderRecorderException(
+        'File ghi âm rỗng. Vui lòng thử lại và nói rõ hơn.',
+      );
+    }
+
+    return stoppedPath;
   }
 
   @override
   Future<void> cancel() async {
     final filePath = _currentPath;
     if (filePath != null) {
-      RecordMp3.instance.stop();
+      await _recorder.cancel();
     }
 
     final pathToDelete = filePath ?? _lastPath;

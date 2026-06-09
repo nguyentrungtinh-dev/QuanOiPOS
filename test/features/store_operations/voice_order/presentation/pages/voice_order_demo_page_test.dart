@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,78 +29,107 @@ import 'package:quan_oi/features/workspace_context/domain/usecases/save_last_act
 import 'package:quan_oi/features/workspace_context/presentation/providers/workspace_context_providers.dart';
 
 void main() {
-  testWidgets('idle page only shows mic CTA without bottom sheet controls', (
-    tester,
-  ) async {
+  testWidgets('idle page shows hold mic CTA', (tester) async {
     await _pumpVoiceOrderPage(tester);
     await tester.pumpAndSettle();
 
     expect(find.text('Order giọng nói'), findsOneWidget);
-    expect(find.text('Chạm mic để đọc món'), findsOneWidget);
+    expect(find.text('Nhấn giữ mic để đọc order'), findsOneWidget);
     expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
-    expect(find.text('Đọc order bằng giọng nói'), findsNothing);
-    expect(find.text('Nhập tên khách hàng, phòng bàn...'), findsNothing);
   });
 
-  testWidgets('tap mic opens bottom sheet and shows live transcript', (
+  testWidgets('hold mic starts recording and release sends to backend', (
     tester,
   ) async {
     final recorder = _FakeVoiceOrderAudioRecorder();
-    final speechPreview = _FakeVoiceOrderSpeechPreviewService(
-      transcript: 'hai cà phê sữa',
-    );
-    await _pumpVoiceOrderPage(
-      tester,
-      recorder: recorder,
-      speechPreview: speechPreview,
-    );
+    await _pumpVoiceOrderPage(tester, recorder: recorder);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.mic_rounded));
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byIcon(Icons.mic_rounded)),
+    );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('Đọc order bằng giọng nói'), findsOneWidget);
-    expect(find.text('Bạn đang nói'), findsOneWidget);
-    expect(find.text('hai cà phê sữa'), findsOneWidget);
+    expect(find.text('Đang nghe...'), findsOneWidget);
     expect(recorder.startCallCount, 1);
-    expect(speechPreview.startCallCount, 1);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bàn 8'), findsOneWidget);
+    expect(find.text('mi hai san'), findsOneWidget);
+    expect(find.text('Ghi chú: cay'), findsOneWidget);
   });
 
-  testWidgets('recognized result renders on main page after sending audio', (
+  testWidgets('release mic shows processing while waiting for backend', (
     tester,
   ) async {
-    final repository = _FakeVoiceOrderRepository(
-      recognition: const VoiceOrderRecognition(
-        transcript: 'Cho tôi 1 trà sữa',
-        items: [
-          VoiceOrderItem(
-            productId: 1,
-            productName: 'Trà sữa',
-            quantity: 1,
-            unitPrice: 45000,
-            totalPrice: 45000,
-            confidence: 0.92,
-          ),
-        ],
-        unmatchedItems: [],
-        estimatedTotal: 45000,
+    final completer = Completer<VoiceOrderRecognition>();
+    await _pumpVoiceOrderPage(
+      tester,
+      repository: _FakeVoiceOrderRepository(
+        recognitionFuture: completer.future,
       ),
     );
-    await _pumpVoiceOrderPage(tester, repository: repository);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.mic_rounded));
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byIcon(Icons.mic_rounded)),
+    );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.text('Dừng'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Gửi'));
+    await gesture.up();
+    await tester.pump();
+
+    expect(find.text('Đang xử lý...'), findsOneWidget);
+
+    completer.complete(_recognition());
     await tester.pumpAndSettle();
 
-    expect(find.text('Kết quả nhận diện'), findsOneWidget);
-    expect(find.text('Cho tôi 1 trà sữa'), findsOneWidget);
-    expect(find.text('Trà sữa'), findsOneWidget);
+    expect(find.text('Bàn 8'), findsOneWidget);
+  });
+
+  testWidgets('cancel opens confirm dialog and clears result', (tester) async {
+    await _pumpVoiceOrderPage(tester);
+    await tester.pumpAndSettle();
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byIcon(Icons.mic_rounded)),
+    );
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(find.text('mi hai san'), findsOneWidget);
+    expect(find.text('Xác nhận'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Hủy').first);
+    await tester.tap(find.text('Hủy'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hủy order giọng nói?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Hủy'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('mi hai san'), findsNothing);
+    expect(find.text('Nhấn giữ mic để đọc order'), findsOneWidget);
+  });
+
+  testWidgets('permission denied microphone state renders message', (
+    tester,
+  ) async {
+    await _pumpVoiceOrderPage(
+      tester,
+      recorder: _FakeVoiceOrderAudioRecorder(
+        startError: const VoiceOrderRecorderPermissionException(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.press(find.byIcon(Icons.mic_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.mic_off_outlined), findsWidgets);
+    expect(find.textContaining('microphone'), findsWidgets);
   });
 }
 
@@ -162,19 +193,27 @@ Future<void> _pumpVoiceOrderPage(
 
 VoiceOrderRecognition _recognition() {
   return const VoiceOrderRecognition(
-    transcript: 'Cho tôi 1 trà sữa',
+    storeId: 8,
+    transcript: '',
+    validationSucceeded: true,
+    validationMessage: '',
+    tableName: '8',
     items: [
       VoiceOrderItem(
-        productId: 1,
-        productName: 'Trà sữa',
+        productId: null,
+        productName: 'mi hai san',
         quantity: 1,
-        unitPrice: 45000,
-        totalPrice: 45000,
-        confidence: 0.92,
+        available: true,
+        note: 'cay',
+      ),
+      VoiceOrderItem(
+        productId: null,
+        productName: 'lau bo',
+        quantity: 1,
+        available: true,
       ),
     ],
     unmatchedItems: [],
-    estimatedTotal: 45000,
   );
 }
 
@@ -249,7 +288,7 @@ const _store = Store(
   ownerAccountId: 10,
   storeName: 'FPT Shipper Vip',
   phone: '0909000000',
-  address: 'Tầng 1',
+  address: 'Tang 1',
   status: StoreStatus.active,
   isDeleted: false,
 );
@@ -272,27 +311,44 @@ class _FakeLastActiveStoreStorage implements LastActiveStoreStorage {
 }
 
 class _FakeVoiceOrderRepository implements VoiceOrderRepository {
-  final VoiceOrderRecognition recognition;
+  final VoiceOrderRecognition? recognition;
+  final Future<VoiceOrderRecognition>? recognitionFuture;
 
-  _FakeVoiceOrderRepository({required this.recognition});
+  _FakeVoiceOrderRepository({this.recognition, this.recognitionFuture});
 
   @override
-  Future<VoiceOrderRecognition> recognizeAudioFile(String audioFilePath) async {
-    return recognition;
+  Future<VoiceOrderRecognition> recognizeAudioFile({
+    required String audioFilePath,
+    required int storeId,
+  }) async {
+    final future = recognitionFuture;
+    if (future != null) {
+      return future;
+    }
+
+    return recognition!;
   }
 }
 
 class _FakeVoiceOrderAudioRecorder implements VoiceOrderAudioRecorder {
+  final Object? startError;
   int startCallCount = 0;
+
+  _FakeVoiceOrderAudioRecorder({this.startError});
 
   @override
   Future<String> start() async {
     startCallCount += 1;
-    return '/tmp/voice-order.mp3';
+    final error = startError;
+    if (error != null) {
+      throw error;
+    }
+
+    return '/tmp/voice-order.wav';
   }
 
   @override
-  Future<String?> stop() async => '/tmp/voice-order.mp3';
+  Future<String?> stop() async => '/tmp/voice-order.wav';
 
   @override
   Future<void> cancel() async {}
@@ -300,22 +356,11 @@ class _FakeVoiceOrderAudioRecorder implements VoiceOrderAudioRecorder {
 
 class _FakeVoiceOrderSpeechPreviewService
     implements VoiceOrderSpeechPreviewService {
-  final String? transcript;
-  int startCallCount = 0;
-
-  _FakeVoiceOrderSpeechPreviewService({this.transcript});
-
   @override
   Future<void> start({
     required void Function(String transcript) onTranscript,
     required void Function(String message) onUnavailable,
-  }) async {
-    startCallCount += 1;
-    final text = transcript;
-    if (text != null) {
-      onTranscript(text);
-    }
-  }
+  }) async {}
 
   @override
   Future<void> stop() async {}

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../../config/router_config.dart';
 import '../../../../../core/constants/app_constants.dart';
@@ -9,7 +8,6 @@ import '../../../../../core/constants/app_permission_codes.dart';
 import '../../../../../core/theme/index.dart';
 import '../../../../workspace_context/presentation/controllers/store_access_state.dart';
 import '../../../../workspace_context/presentation/providers/workspace_context_providers.dart';
-import '../../../presentation/widgets/store_bottom_sheet_panel.dart';
 import '../../domain/entities/voice_order_item.dart';
 import '../../domain/entities/voice_order_recognition.dart';
 import '../controllers/voice_order_state.dart';
@@ -44,7 +42,7 @@ class VoiceOrderDemoPage extends ConsumerWidget {
           ),
           StoreAccessStatus.ready =>
             accessState.can(AppPermissionCodes.dashboardView)
-                ? _VoiceOrderDemoBody(storeId: storeId)
+                ? _VoiceOrderBody(storeId: storeId)
                 : const _BlockedView(
                     icon: Icons.visibility_off_outlined,
                     title: 'Bạn chưa có quyền dùng demo order giọng nói',
@@ -57,14 +55,15 @@ class VoiceOrderDemoPage extends ConsumerWidget {
   }
 }
 
-class _VoiceOrderDemoBody extends ConsumerWidget {
+class _VoiceOrderBody extends ConsumerWidget {
   final int storeId;
 
-  const _VoiceOrderDemoBody({required this.storeId});
+  const _VoiceOrderBody({required this.storeId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(voiceOrderNotifierProvider);
+    final notifier = ref.read(voiceOrderNotifierProvider.notifier);
 
     return ColoredBox(
       color: AppColors.background,
@@ -79,17 +78,36 @@ class _VoiceOrderDemoBody extends ConsumerWidget {
                 AppConstants.spacingMd,
                 AppConstants.spacingXxl,
               ),
-              child: state.recognition == null
-                  ? _MicOnlyContent(
-                      state: state,
-                      onMicTap: () => _openVoiceOrderSheet(context, ref),
-                    )
-                  : _RecognitionResult(
-                      recognition: state.recognition!,
-                      onRecordAgain: () => _openVoiceOrderSheet(context, ref),
-                      onClear: () =>
-                          ref.read(voiceOrderNotifierProvider.notifier).clear(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _HoldMicButton(
+                    state: state,
+                    onStart: notifier.startRecording,
+                    onStop: () => notifier.stopAndRecognize(storeId),
+                  ),
+                  const SizedBox(height: AppConstants.spacingLg),
+                  _VoiceStatusText(state: state),
+                  if (state.errorMessage != null &&
+                      state.errorMessage!.trim().isNotEmpty) ...[
+                    const SizedBox(height: AppConstants.spacingMd),
+                    _InlineMessage(
+                      icon: state.status == VoiceOrderStatus.permissionDenied
+                          ? Icons.mic_off_outlined
+                          : Icons.error_outline_rounded,
+                      message: state.errorMessage!,
                     ),
+                  ],
+                  if (state.recognition != null) ...[
+                    const SizedBox(height: AppConstants.spacingLg),
+                    _RecognitionResult(
+                      recognition: state.recognition!,
+                      onConfirm: () {},
+                      onCancel: () => _showCancelDialog(context, ref),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ],
@@ -97,18 +115,28 @@ class _VoiceOrderDemoBody extends ConsumerWidget {
     );
   }
 
-  Future<void> _openVoiceOrderSheet(BuildContext context, WidgetRef ref) async {
-    await showModalBottomSheet<void>(
+  Future<void> _showCancelDialog(BuildContext context, WidgetRef ref) async {
+    final shouldClear = await showDialog<bool>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => const _VoiceOrderBottomSheet(),
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Hủy order giọng nói?'),
+          content: const Text('Danh sách món vừa nhận diện sẽ bị xóa.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Xem lại'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Hủy'),
+            ),
+          ],
+        );
+      },
     );
 
-    final status = ref.read(voiceOrderNotifierProvider).status;
-    if (status == VoiceOrderStatus.recording ||
-        status == VoiceOrderStatus.readyToSend ||
-        status == VoiceOrderStatus.recognizing) {
+    if (shouldClear == true) {
       await ref.read(voiceOrderNotifierProvider.notifier).clear();
     }
   }
@@ -157,266 +185,119 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _MicOnlyContent extends StatelessWidget {
+class _HoldMicButton extends StatelessWidget {
   final VoiceOrderState state;
-  final VoidCallback onMicTap;
+  final VoidCallback onStart;
+  final VoidCallback onStop;
 
-  const _MicOnlyContent({required this.state, required this.onMicTap});
+  const _HoldMicButton({
+    required this.state,
+    required this.onStart,
+    required this.onStop,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final message = state.errorMessage;
+    final isRecording = state.status == VoiceOrderStatus.recording;
+    final isProcessing = state.status == VoiceOrderStatus.recognizing;
+    final outerColor = isRecording
+        ? AppColors.error.withValues(alpha: 0.12)
+        : AppColors.primaryLight;
+    final innerColor = isRecording ? AppColors.error : AppColors.primary;
+
+    return Center(
+      child: GestureDetector(
+        onTapDown: isProcessing ? null : (_) => onStart(),
+        onTapUp: isProcessing ? null : (_) => onStop(),
+        onTapCancel: isProcessing ? null : onStop,
+        child: Container(
+          width: 132,
+          height: 132,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: outerColor,
+            shape: BoxShape.circle,
+            border: Border.all(color: innerColor.withValues(alpha: 0.22)),
+          ),
+          child: Container(
+            width: 90,
+            height: 90,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isProcessing ? AppColors.textMuted : innerColor,
+              shape: BoxShape.circle,
+            ),
+            child: isProcessing
+                ? const SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: AppColors.surface,
+                    ),
+                  )
+                : const Icon(
+                    Icons.mic_rounded,
+                    color: AppColors.surface,
+                    size: 42,
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VoiceStatusText extends StatelessWidget {
+  final VoiceOrderState state;
+
+  const _VoiceStatusText({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = switch (state.status) {
+      VoiceOrderStatus.recording => 'Đang nghe...',
+      VoiceOrderStatus.recognizing => 'Đang xử lý...',
+      VoiceOrderStatus.success => 'Kiểm tra lại order',
+      VoiceOrderStatus.error ||
+      VoiceOrderStatus.permissionDenied => 'Nhấn giữ mic để thử lại',
+      _ => 'Nhấn giữ mic để đọc order',
+    };
+    final subtitle = switch (state.status) {
+      VoiceOrderStatus.recording => 'Thả tay để gửi lên AI nhận diện món.',
+      VoiceOrderStatus.recognizing => 'Vui lòng đợi phản hồi từ backend.',
+      VoiceOrderStatus.success =>
+        'Kiểm tra bàn, món, số lượng và note trước khi xác nhận.',
+      _ => 'Đọc rõ bàn, tên món, số lượng và ghi chú nếu có.',
+    };
 
     return Column(
       children: [
-        const SizedBox(height: AppConstants.spacingXxl),
-        _MicHeroButton(onTap: onMicTap),
-        const SizedBox(height: AppConstants.spacingLg),
         Text(
-          'Chạm mic để đọc món',
+          title,
           style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppConstants.spacingXs),
         Text(
-          'Quán Ơi sẽ ghi âm, hiện text bạn đang nói và gửi AI nhận diện món.',
+          subtitle,
           style: AppTextStyles.bodySm,
           textAlign: TextAlign.center,
         ),
-        if (message != null && message.isNotEmpty) ...[
-          const SizedBox(height: AppConstants.spacingLg),
-          _InlineMessage(
-            icon: state.status == VoiceOrderStatus.permissionDenied
-                ? Icons.mic_off_outlined
-                : Icons.info_outline_rounded,
-            message: message,
-          ),
-        ],
       ],
-    );
-  }
-}
-
-class _MicHeroButton extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _MicHeroButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.primaryLight,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Container(
-          width: 128,
-          height: 128,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-          ),
-          child: Container(
-            width: 88,
-            height: 88,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.mic_rounded,
-              color: AppColors.surface,
-              size: 42,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _VoiceOrderBottomSheet extends ConsumerStatefulWidget {
-  const _VoiceOrderBottomSheet();
-
-  @override
-  ConsumerState<_VoiceOrderBottomSheet> createState() =>
-      _VoiceOrderBottomSheetState();
-}
-
-class _VoiceOrderBottomSheetState
-    extends ConsumerState<_VoiceOrderBottomSheet> {
-  @override
-  void initState() {
-    super.initState();
-    Future<void>.microtask(() {
-      ref.read(voiceOrderNotifierProvider.notifier).startRecording();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    ref.listen<VoiceOrderState>(voiceOrderNotifierProvider, (previous, next) {
-      if (next.status == VoiceOrderStatus.success &&
-          previous?.status != VoiceOrderStatus.success &&
-          Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-    });
-
-    final state = ref.watch(voiceOrderNotifierProvider);
-    final notifier = ref.read(voiceOrderNotifierProvider.notifier);
-    final isRecording = state.status == VoiceOrderStatus.recording;
-    final canSend = state.status == VoiceOrderStatus.readyToSend;
-    final isRecognizing = state.status == VoiceOrderStatus.recognizing;
-
-    return SizedBox(
-      height: MediaQuery.sizeOf(context).height * 0.72,
-      child: StoreBottomSheetPanel(
-        title: 'Đọc order bằng giọng nói',
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppConstants.spacingLg,
-            0,
-            AppConstants.spacingLg,
-            AppConstants.spacingLg,
-          ),
-          children: [
-            _RecorderCard(isAnimating: isRecording || isRecognizing),
-            const SizedBox(height: AppConstants.spacingMd),
-            _LiveTranscriptCard(state: state),
-            if (state.errorMessage != null &&
-                state.errorMessage!.trim().isNotEmpty) ...[
-              const SizedBox(height: AppConstants.spacingMd),
-              _InlineMessage(
-                icon: state.status == VoiceOrderStatus.permissionDenied
-                    ? Icons.mic_off_outlined
-                    : Icons.error_outline_rounded,
-                message: state.errorMessage!,
-              ),
-            ],
-            const SizedBox(height: AppConstants.spacingLg),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: isRecognizing
-                        ? null
-                        : () async {
-                            await notifier.clear();
-                            if (context.mounted) {
-                              Navigator.of(context).pop();
-                            }
-                          },
-                    icon: const Icon(Icons.delete_outline_rounded),
-                    label: const Text('Xóa'),
-                  ),
-                ),
-                const SizedBox(width: AppConstants.spacingSm),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: isRecognizing
-                        ? null
-                        : isRecording
-                        ? notifier.stopRecording
-                        : canSend
-                        ? notifier.recognize
-                        : notifier.startRecording,
-                    icon: Icon(
-                      isRecording
-                          ? Icons.stop_rounded
-                          : canSend
-                          ? Icons.send_rounded
-                          : Icons.mic_rounded,
-                    ),
-                    label: Text(
-                      isRecording
-                          ? 'Dừng'
-                          : canSend
-                          ? 'Gửi'
-                          : 'Nói lại',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LiveTranscriptCard extends StatelessWidget {
-  final VoiceOrderState state;
-
-  const _LiveTranscriptCard({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    final transcript = state.liveTranscript.trim();
-    final previewMessage = state.speechPreviewMessage?.trim();
-    final displayText = transcript.isEmpty ? 'Đang nghe...' : transcript;
-
-    return _SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.record_voice_over_outlined,
-                color: AppColors.primary,
-                size: 20,
-              ),
-              const SizedBox(width: AppConstants.spacingSm),
-              Text(
-                'Bạn đang nói',
-                style: AppTextStyles.labelSm.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppConstants.spacingMd),
-          AnimatedSwitcher(
-            duration: AppConstants.animNormal,
-            child: Text(
-              displayText,
-              key: ValueKey(displayText),
-              style: transcript.isEmpty
-                  ? AppTextStyles.placeholder
-                  : AppTextStyles.bodyBase.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-            ),
-          ),
-          if (previewMessage != null &&
-              previewMessage.isNotEmpty &&
-              transcript.isEmpty) ...[
-            const SizedBox(height: AppConstants.spacingSm),
-            Text(
-              previewMessage,
-              style: AppTextStyles.bodyXs.copyWith(color: AppColors.warning),
-            ),
-          ],
-        ],
-      ),
     );
   }
 }
 
 class _RecognitionResult extends StatelessWidget {
   final VoiceOrderRecognition recognition;
-  final VoidCallback onRecordAgain;
-  final VoidCallback onClear;
+  final VoidCallback onConfirm;
+  final VoidCallback onCancel;
 
   const _RecognitionResult({
     required this.recognition,
-    required this.onRecordAgain,
-    required this.onClear,
+    required this.onConfirm,
+    required this.onCancel,
   });
 
   @override
@@ -424,126 +305,113 @@ class _RecognitionResult extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Kết quả nhận diện',
-                style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
+        _SectionCard(
+          child: Row(
+            children: [
+              const Icon(
+                Icons.table_restaurant_outlined,
+                color: AppColors.primary,
               ),
-            ),
-            IconButton(
-              tooltip: 'Xóa kết quả',
-              onPressed: onClear,
-              icon: const Icon(Icons.close_rounded),
-            ),
-          ],
+              const SizedBox(width: AppConstants.spacingSm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bàn',
+                      style: AppTextStyles.bodyXs.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppConstants.spacingXs),
+                    Text(
+                      _tableLabel(recognition),
+                      style: AppTextStyles.h4.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: AppConstants.spacingSm),
+        const SizedBox(height: AppConstants.spacingMd),
         _SectionCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Nội dung AI nghe được',
+                'Món đã đọc',
                 style: AppTextStyles.labelSm.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: AppConstants.spacingSm),
-              Text(
-                recognition.transcript.isEmpty
-                    ? 'Chưa có transcript'
-                    : recognition.transcript,
-                style: AppTextStyles.bodyBase,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppConstants.spacingMd),
-        if (recognition.items.isEmpty)
-          const _InlineMessage(
-            icon: Icons.search_off_rounded,
-            message: 'Chưa tìm thấy sản phẩm khớp trong đơn đọc.',
-          )
-        else
-          _SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Món đã nhận diện',
-                  style: AppTextStyles.labelSm.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: AppConstants.spacingSm),
+              if (recognition.items.isEmpty)
+                Text('Chưa có món nào.', style: AppTextStyles.bodySm)
+              else
                 for (final item in recognition.items) ...[
                   _RecognizedItemRow(item: item),
                   if (item != recognition.items.last)
                     const Divider(height: AppConstants.spacingLg),
                 ],
-              ],
-            ),
-          ),
-        if (recognition.unmatchedItems.isNotEmpty) ...[
-          const SizedBox(height: AppConstants.spacingMd),
-          _SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Chưa khớp sản phẩm',
-                  style: AppTextStyles.labelSm.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.warning,
-                  ),
-                ),
-                const SizedBox(height: AppConstants.spacingSm),
-                for (final item in recognition.unmatchedItems)
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      bottom: AppConstants.spacingSm,
-                    ),
-                    child: Text(
-                      '${item.quantity} x ${item.rawText} - ${item.reason}',
-                      style: AppTextStyles.bodySm,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-        const SizedBox(height: AppConstants.spacingMd),
-        _SectionCard(
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Tạm tính',
-                  style: AppTextStyles.label.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Text(
-                _formatCurrency(recognition.estimatedTotal),
-                style: AppTextStyles.h3.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
             ],
           ),
         ),
+        if (recognition.missingFields.isNotEmpty) ...[
+          const SizedBox(height: AppConstants.spacingMd),
+          _InlineMessage(
+            icon: Icons.warning_amber_rounded,
+            message: 'Thiếu thông tin: ${recognition.missingFields.join(', ')}',
+          ),
+        ],
+        if (recognition.errors.isNotEmpty) ...[
+          const SizedBox(height: AppConstants.spacingMd),
+          _InlineMessage(
+            icon: Icons.error_outline_rounded,
+            message: recognition.errors.join('\n'),
+          ),
+        ],
         const SizedBox(height: AppConstants.spacingLg),
-        ElevatedButton.icon(
-          onPressed: onRecordAgain,
-          icon: const Icon(Icons.mic_rounded),
-          label: const Text('Đọc đơn mới'),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onCancel,
+                icon: const Icon(Icons.close_rounded),
+                label: const Text('Hủy'),
+              ),
+            ),
+            const SizedBox(width: AppConstants.spacingSm),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: onConfirm,
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Xác nhận'),
+              ),
+            ),
+          ],
         ),
       ],
     );
+  }
+
+  String _tableLabel(VoiceOrderRecognition recognition) {
+    final tableName = recognition.tableName?.trim();
+    if (tableName != null && tableName.isNotEmpty) {
+      final normalized = tableName.toLowerCase();
+      return normalized.startsWith('bàn') || normalized.startsWith('ban')
+          ? tableName
+          : 'Bàn $tableName';
+    }
+
+    final tableId = recognition.tableId;
+    if (tableId != null) {
+      return 'Bàn $tableId';
+    }
+
+    return 'Chưa rõ bàn';
   }
 }
 
@@ -554,6 +422,8 @@ class _RecognizedItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final note = item.note?.trim();
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -576,98 +446,14 @@ class _RecognizedItemRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(item.productName, style: AppTextStyles.labelSm),
-              const SizedBox(height: AppConstants.spacingXs),
-              Text(
-                '${_formatCurrency(item.unitPrice)} · Tin cậy ${(item.confidence * 100).round()}%',
-                style: AppTextStyles.bodyXs,
-              ),
+              if (note != null && note.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.spacingXs),
+                Text('Ghi chú: $note', style: AppTextStyles.bodyXs),
+              ],
             ],
           ),
         ),
-        const SizedBox(width: AppConstants.spacingSm),
-        Text(_formatCurrency(item.totalPrice), style: AppTextStyles.labelSm),
       ],
-    );
-  }
-}
-
-class _RecorderCard extends StatefulWidget {
-  final bool isAnimating;
-
-  const _RecorderCard({required this.isAnimating});
-
-  @override
-  State<_RecorderCard> createState() => _RecorderCardState();
-}
-
-class _RecorderCardState extends State<_RecorderCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-    if (widget.isAnimating) {
-      _controller.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _RecorderCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isAnimating && !_controller.isAnimating) {
-      _controller.repeat(reverse: true);
-    } else if (!widget.isAnimating && _controller.isAnimating) {
-      _controller.stop();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _SectionCard(
-      child: Column(
-        children: [
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(27, (index) {
-                  final distance = (index - 13).abs();
-                  final baseHeight = 8 + (13 - distance).clamp(0, 13) * 2.2;
-                  final pulse = widget.isAnimating
-                      ? 1 + (_controller.value * (distance.isEven ? 0.45 : 0.2))
-                      : 1.0;
-                  return Container(
-                    width: 4,
-                    height: baseHeight * pulse,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  );
-                }),
-              );
-            },
-          ),
-          const SizedBox(height: AppConstants.spacingMd),
-          Text(
-            widget.isAnimating ? 'Đang nghe...' : 'Đọc tên hàng + số lượng',
-            style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -828,8 +614,4 @@ class _LoadingView extends StatelessWidget {
       child: Center(child: CircularProgressIndicator()),
     );
   }
-}
-
-String _formatCurrency(int value) {
-  return '${NumberFormat.decimalPattern('vi_VN').format(value)} đ';
 }

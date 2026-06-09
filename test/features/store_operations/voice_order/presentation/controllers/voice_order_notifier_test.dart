@@ -11,13 +11,13 @@ import 'package:quan_oi/features/store_operations/voice_order/presentation/servi
 import 'package:quan_oi/features/store_operations/voice_order/presentation/services/voice_order_speech_preview_service.dart';
 
 void main() {
-  test('records, stops, and recognizes voice order', () async {
+  test('records, releases, and recognizes voice order', () async {
     final repository = _FakeVoiceOrderRepository(
       recognition: _recognition(unmatched: true),
     );
     final recorder = _FakeVoiceOrderAudioRecorder();
     final speechPreview = _FakeVoiceOrderSpeechPreviewService(
-      transcript: 'một trà sữa',
+      transcript: 'mot tra sua',
     );
     final container = _container(
       repository: repository,
@@ -41,25 +41,18 @@ void main() {
       VoiceOrderStatus.recording,
     );
     expect(recorder.startCallCount, 1);
-    expect(speechPreview.startCallCount, 1);
-    expect(
-      container.read(voiceOrderNotifierProvider).liveTranscript,
-      'một trà sữa',
-    );
+    expect(speechPreview.startCallCount, 0);
+    expect(container.read(voiceOrderNotifierProvider).liveTranscript, isEmpty);
 
-    await notifier.stopRecording();
-    expect(
-      container.read(voiceOrderNotifierProvider).status,
-      VoiceOrderStatus.readyToSend,
-    );
-    expect(speechPreview.stopCallCount, 1);
+    await notifier.stopAndRecognize(5);
+    expect(speechPreview.stopCallCount, 0);
 
-    await notifier.recognize();
     final state = container.read(voiceOrderNotifierProvider);
     expect(state.status, VoiceOrderStatus.success);
-    expect(state.recognition?.items.single.productName, 'Trà sữa');
-    expect(state.recognition?.unmatchedItems.single.rawText, 'trà đào');
+    expect(state.recognition?.items.single.productName, 'Tra sua');
+    expect(state.recognition?.unmatchedItems.single.rawText, 'tra dao');
     expect(repository.recognizedAudioPath, recorder.path);
+    expect(repository.recognizedStoreId, 5);
   });
 
   test('permission denial sets permissionDenied state', () async {
@@ -105,8 +98,7 @@ void main() {
 
     final notifier = container.read(voiceOrderNotifierProvider.notifier);
     await notifier.startRecording();
-    await notifier.stopRecording();
-    await notifier.recognize();
+    await notifier.stopAndRecognize(5);
 
     final state = container.read(voiceOrderNotifierProvider);
     expect(state.status, VoiceOrderStatus.error);
@@ -114,32 +106,7 @@ void main() {
     expect(state.errorMessage, 'Backend down');
   });
 
-  test('speech preview failure does not block recording', () async {
-    final speechPreview = _FakeVoiceOrderSpeechPreviewService(
-      unavailableMessage: 'Speech unavailable',
-    );
-    final container = _container(
-      repository: _FakeVoiceOrderRepository(recognition: _recognition()),
-      recorder: _FakeVoiceOrderAudioRecorder(),
-      speechPreview: speechPreview,
-    );
-    addTearDown(container.dispose);
-    final subscription = container.listen(
-      voiceOrderNotifierProvider,
-      (_, _) {},
-      fireImmediately: true,
-    );
-    addTearDown(subscription.close);
-
-    await container.read(voiceOrderNotifierProvider.notifier).startRecording();
-
-    final state = container.read(voiceOrderNotifierProvider);
-    expect(state.status, VoiceOrderStatus.recording);
-    expect(state.liveTranscript, isEmpty);
-    expect(state.speechPreviewMessage, 'Speech unavailable');
-  });
-
-  test('clear cancels recorder and speech preview', () async {
+  test('clear cancels recorder only', () async {
     final recorder = _FakeVoiceOrderAudioRecorder();
     final speechPreview = _FakeVoiceOrderSpeechPreviewService();
     final container = _container(
@@ -164,7 +131,7 @@ void main() {
       VoiceOrderStatus.idle,
     );
     expect(recorder.cancelCallCount, 1);
-    expect(speechPreview.cancelCallCount, 1);
+    expect(speechPreview.cancelCallCount, 0);
   });
 }
 
@@ -186,27 +153,32 @@ ProviderContainer _container({
 
 VoiceOrderRecognition _recognition({bool unmatched = false}) {
   return VoiceOrderRecognition(
-    transcript: 'Cho tôi 1 trà sữa',
+    transcript: 'Cho toi 1 tra sua',
+    validationSucceeded: !unmatched,
+    validationMessage: unmatched
+        ? 'Order voice chua hop le.'
+        : 'Order voice hop le.',
+    errors: unmatched ? const ['Product not found in database'] : const [],
+    tableId: 3,
+    tableName: 'Ban 3',
+    tableStatus: 'Available',
     items: const [
       VoiceOrderItem(
         productId: 1,
-        productName: 'Trà sữa',
+        productName: 'Tra sua',
         quantity: 1,
-        unitPrice: 45000,
-        totalPrice: 45000,
-        confidence: 0.92,
+        available: true,
       ),
     ],
     unmatchedItems: unmatched
         ? const [
             UnmatchedVoiceOrderItem(
-              rawText: 'trà đào',
+              rawText: 'tra dao',
               quantity: 2,
               reason: 'Product not found in database',
             ),
           ]
         : const [],
-    estimatedTotal: 45000,
   );
 }
 
@@ -214,12 +186,17 @@ class _FakeVoiceOrderRepository implements VoiceOrderRepository {
   final VoiceOrderRecognition? recognition;
   final Exception? recognitionError;
   String? recognizedAudioPath;
+  int? recognizedStoreId;
 
   _FakeVoiceOrderRepository({this.recognition, this.recognitionError});
 
   @override
-  Future<VoiceOrderRecognition> recognizeAudioFile(String audioFilePath) async {
+  Future<VoiceOrderRecognition> recognizeAudioFile({
+    required String audioFilePath,
+    required int storeId,
+  }) async {
     recognizedAudioPath = audioFilePath;
+    recognizedStoreId = storeId;
     final error = recognitionError;
     if (error != null) {
       throw error;
@@ -231,7 +208,7 @@ class _FakeVoiceOrderRepository implements VoiceOrderRepository {
 
 class _FakeVoiceOrderAudioRecorder implements VoiceOrderAudioRecorder {
   final Object? startError;
-  final String path = '/tmp/voice-order.mp3';
+  final String path = '/tmp/voice-order.wav';
   int startCallCount = 0;
   int cancelCallCount = 0;
 
@@ -262,15 +239,11 @@ class _FakeVoiceOrderAudioRecorder implements VoiceOrderAudioRecorder {
 class _FakeVoiceOrderSpeechPreviewService
     implements VoiceOrderSpeechPreviewService {
   final String? transcript;
-  final String? unavailableMessage;
   int startCallCount = 0;
   int stopCallCount = 0;
   int cancelCallCount = 0;
 
-  _FakeVoiceOrderSpeechPreviewService({
-    this.transcript,
-    this.unavailableMessage,
-  });
+  _FakeVoiceOrderSpeechPreviewService({this.transcript});
 
   @override
   Future<void> start({
@@ -278,12 +251,6 @@ class _FakeVoiceOrderSpeechPreviewService
     required void Function(String message) onUnavailable,
   }) async {
     startCallCount += 1;
-    final message = unavailableMessage;
-    if (message != null) {
-      onUnavailable(message);
-      return;
-    }
-
     final text = transcript;
     if (text != null) {
       onTranscript(text);

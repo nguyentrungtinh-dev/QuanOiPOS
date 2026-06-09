@@ -28,7 +28,7 @@ final recognizeVoiceOrderUseCaseProvider = Provider<RecognizeVoiceOrderUseCase>(
 final voiceOrderAudioRecorderProvider = Provider<VoiceOrderAudioRecorder>((
   ref,
 ) {
-  return RecordMp3VoiceOrderAudioRecorder();
+  return RecordVoiceOrderAudioRecorder();
 });
 
 final voiceOrderSpeechPreviewServiceProvider =

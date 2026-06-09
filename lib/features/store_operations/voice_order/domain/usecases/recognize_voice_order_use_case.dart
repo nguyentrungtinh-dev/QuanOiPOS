@@ -6,7 +6,13 @@ class RecognizeVoiceOrderUseCase {
 
   const RecognizeVoiceOrderUseCase(this._repository);
 
-  Future<VoiceOrderRecognition> call(String audioFilePath) {
-    return _repository.recognizeAudioFile(audioFilePath);
+  Future<VoiceOrderRecognition> call({
+    required String audioFilePath,
+    required int storeId,
+  }) {
+    return _repository.recognizeAudioFile(
+      audioFilePath: audioFilePath,
+      storeId: storeId,
+    );
   }
 }
