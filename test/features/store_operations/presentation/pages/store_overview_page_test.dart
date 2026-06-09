@@ -11,7 +11,7 @@ import 'package:quan_oi/features/auth/presentation/controllers/auth_state.dart';
 import 'package:quan_oi/features/auth/presentation/providers/auth_providers.dart';
 import 'package:quan_oi/features/store_operations/presentation/pages/store_feature_search_page.dart';
 import 'package:quan_oi/features/store_operations/presentation/pages/store_overview_page.dart';
-import 'package:quan_oi/features/store_operations/voice_order/presentation/pages/voice_order_demo_page.dart';
+import 'package:quan_oi/features/store_operations/voice_order/presentation/pages/voice_order_page.dart';
 import 'package:quan_oi/features/workspace_context/domain/entities/store.dart';
 import 'package:quan_oi/features/workspace_context/domain/entities/store_access_context.dart';
 import 'package:quan_oi/features/workspace_context/domain/exceptions/store_access_denied_exception.dart';
@@ -160,7 +160,9 @@ void main() {
     expect(find.text('Product route opened'), findsOneWidget);
   });
 
-  testWidgets('voice order item navigates to demo route', (tester) async {
+  testWidgets('voice order item navigates to voice order route', (
+    tester,
+  ) async {
     final repository = const _FakeWorkspaceRepository(
       permissions: [StorePermission(permissionId: 1, code: 'DASHBOARD.VIEW')],
     );
@@ -174,7 +176,7 @@ void main() {
         ),
         GoRoute(
           path: '/stores/:storeId/voice-order',
-          name: RouteNames.storeVoiceOrderDemo,
+          name: RouteNames.storeVoiceOrder,
           builder: (context, state) => const Scaffold(
             body: Center(child: Text('Voice order demo opened')),
           ),
@@ -234,8 +236,8 @@ void main() {
         ),
         GoRoute(
           path: '/stores/:storeId/voice-order',
-          name: RouteNames.storeVoiceOrderDemo,
-          builder: (context, state) => const VoiceOrderDemoPage(storeId: 5),
+          name: RouteNames.storeVoiceOrder,
+          builder: (context, state) => const VoiceOrderPage(storeId: 5),
         ),
       ],
     );
@@ -268,10 +270,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Bạn chưa có quyền dùng demo order giọng nói'),
-      findsOneWidget,
-    );
+    expect(find.text('Bạn chưa có quyền dùng order giọng nói'), findsOneWidget);
   });
 
   testWidgets(

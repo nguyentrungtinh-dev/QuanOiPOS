@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/entities/voice_order_item.dart';
+import '../../domain/entities/voice_order_recognition.dart';
 import '../../domain/usecases/recognize_voice_order_use_case.dart';
 import '../providers/voice_order_providers.dart';
 import '../services/voice_order_audio_recorder.dart';
@@ -143,6 +145,60 @@ class VoiceOrderNotifier extends AutoDisposeNotifier<VoiceOrderState> {
   Future<void> clear() async {
     await _audioRecorder.cancel();
     state = const VoiceOrderState.idle();
+  }
+
+  void updateItem(
+    VoiceOrderItem original, {
+    required String productName,
+    required int quantity,
+    String? note,
+  }) {
+    final recognition = state.recognition;
+    if (recognition == null) {
+      return;
+    }
+
+    final itemIndex = recognition.items.indexOf(original);
+    if (itemIndex < 0) {
+      return;
+    }
+
+    final updatedItems = List<VoiceOrderItem>.of(recognition.items);
+    updatedItems[itemIndex] = original.copyWith(
+      productName: productName.trim().isEmpty
+          ? original.productName
+          : productName.trim(),
+      quantity: quantity < 1 ? 1 : quantity,
+      note: note == null || note.trim().isEmpty ? null : note.trim(),
+    );
+
+    _setRecognition(recognition.copyWith(items: updatedItems));
+  }
+
+  void increaseItemQuantity(VoiceOrderItem item) {
+    updateItem(
+      item,
+      productName: item.productName,
+      quantity: item.quantity + 1,
+      note: item.note,
+    );
+  }
+
+  void decreaseItemQuantity(VoiceOrderItem item) {
+    updateItem(
+      item,
+      productName: item.productName,
+      quantity: item.quantity <= 1 ? 1 : item.quantity - 1,
+      note: item.note,
+    );
+  }
+
+  void _setRecognition(VoiceOrderRecognition recognition) {
+    state = state.copyWith(
+      status: VoiceOrderStatus.success,
+      recognition: recognition,
+      errorMessage: null,
+    );
   }
 
   String _errorMessage(Object error, String fallback) {

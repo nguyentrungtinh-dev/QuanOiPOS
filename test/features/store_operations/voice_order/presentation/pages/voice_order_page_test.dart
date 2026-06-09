@@ -13,7 +13,7 @@ import 'package:quan_oi/features/store_operations/voice_order/domain/entities/vo
 import 'package:quan_oi/features/store_operations/voice_order/domain/entities/voice_order_recognition.dart';
 import 'package:quan_oi/features/store_operations/voice_order/domain/repositories/voice_order_repository.dart';
 import 'package:quan_oi/features/store_operations/voice_order/domain/usecases/recognize_voice_order_use_case.dart';
-import 'package:quan_oi/features/store_operations/voice_order/presentation/pages/voice_order_demo_page.dart';
+import 'package:quan_oi/features/store_operations/voice_order/presentation/pages/voice_order_page.dart';
 import 'package:quan_oi/features/store_operations/voice_order/presentation/providers/voice_order_providers.dart';
 import 'package:quan_oi/features/store_operations/voice_order/presentation/services/voice_order_audio_recorder.dart';
 import 'package:quan_oi/features/store_operations/voice_order/presentation/services/voice_order_speech_preview_service.dart';
@@ -29,13 +29,18 @@ import 'package:quan_oi/features/workspace_context/domain/usecases/save_last_act
 import 'package:quan_oi/features/workspace_context/presentation/providers/workspace_context_providers.dart';
 
 void main() {
-  testWidgets('idle page shows hold mic CTA', (tester) async {
+  testWidgets('idle page shows sales layout and bottom mic', (tester) async {
     await _pumpVoiceOrderPage(tester);
     await tester.pumpAndSettle();
 
-    expect(find.text('Order giọng nói'), findsOneWidget);
-    expect(find.text('Nhấn giữ mic để đọc order'), findsOneWidget);
+    expect(find.text('Bán hàng'), findsOneWidget);
+    expect(find.text('Chọn phòng/bàn'), findsOneWidget);
     expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
+
+    final micCenter = tester.getCenter(find.byIcon(Icons.mic_rounded));
+    final screenHeight =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    expect(micCenter.dy, greaterThan(screenHeight * 0.75));
   });
 
   testWidgets('hold mic starts recording and release sends to backend', (
@@ -56,9 +61,11 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle();
 
-    expect(find.text('Bàn 8'), findsOneWidget);
+    expect(find.text('phòng 8'), findsOneWidget);
     expect(find.text('mi hai san'), findsOneWidget);
     expect(find.text('Ghi chú: cay'), findsOneWidget);
+    expect(find.text('Tổng cộng (2)'), findsNothing);
+    expect(find.text('0'), findsWidgets);
   });
 
   testWidgets('release mic shows processing while waiting for backend', (
@@ -85,10 +92,10 @@ void main() {
     completer.complete(_recognition());
     await tester.pumpAndSettle();
 
-    expect(find.text('Bàn 8'), findsOneWidget);
+    expect(find.text('phòng 8'), findsOneWidget);
   });
 
-  testWidgets('cancel opens confirm dialog and clears result', (tester) async {
+  testWidgets('tap item opens edit sheet', (tester) async {
     await _pumpVoiceOrderPage(tester);
     await tester.pumpAndSettle();
 
@@ -100,18 +107,53 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('mi hai san'), findsOneWidget);
-    expect(find.text('Xác nhận'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Hủy').first);
-    await tester.tap(find.text('Hủy'));
-    await tester.pumpAndSettle();
-    expect(find.text('Hủy order giọng nói?'), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Hủy'));
+    await tester.tap(find.text('mi hai san'));
     await tester.pumpAndSettle();
 
-    expect(find.text('mi hai san'), findsNothing);
-    expect(find.text('Nhấn giữ mic để đọc order'), findsOneWidget);
+    expect(find.text('Chỉnh sửa'), findsOneWidget);
+    expect(find.text('Tên hàng'), findsOneWidget);
+    expect(find.text('Giá bán'), findsNothing);
+    expect(find.text('Ghi chú'), findsOneWidget);
+    expect(find.text('Xóa'), findsOneWidget);
+    expect(find.text('Lưu'), findsOneWidget);
+    expect(find.byIcon(Icons.remove_rounded), findsWidgets);
+    expect(find.byIcon(Icons.add_rounded), findsWidgets);
+  });
+
+  testWidgets('tap item quantity plus increments without opening edit sheet', (
+    tester,
+  ) async {
+    await _pumpVoiceOrderPage(tester);
+    await tester.pumpAndSettle();
+    await _recognizeOrder(tester);
+
+    await tester.tap(find.byIcon(Icons.add_rounded).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Chỉnh sửa'), findsNothing);
+    expect(find.text('2'), findsOneWidget);
+  });
+
+  testWidgets('save edit sheet updates rendered item values', (tester) async {
+    await _pumpVoiceOrderPage(tester);
+    await tester.pumpAndSettle();
+    await _recognizeOrder(tester);
+
+    await tester.tap(find.text('mi hai san'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'mi xao bo');
+    await tester.enterText(find.byType(TextFormField).at(1), 'it cay');
+    await tester.tap(find.byIcon(Icons.add_rounded).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lưu'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Chỉnh sửa'), findsNothing);
+    expect(find.text('mi xao bo'), findsOneWidget);
+    expect(find.text('Ghi chú: it cay'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
   });
 
   testWidgets('permission denied microphone state renders message', (
@@ -131,6 +173,15 @@ void main() {
     expect(find.byIcon(Icons.mic_off_outlined), findsWidgets);
     expect(find.textContaining('microphone'), findsWidgets);
   });
+}
+
+Future<void> _recognizeOrder(WidgetTester tester) async {
+  final gesture = await tester.startGesture(
+    tester.getCenter(find.byIcon(Icons.mic_rounded)),
+  );
+  await tester.pump();
+  await gesture.up();
+  await tester.pumpAndSettle();
 }
 
 Future<void> _pumpVoiceOrderPage(
@@ -185,7 +236,7 @@ Future<void> _pumpVoiceOrderPage(
       ],
       child: MaterialApp(
         theme: AppTheme.light,
-        home: const VoiceOrderDemoPage(storeId: 5),
+        home: const VoiceOrderPage(storeId: 5),
       ),
     ),
   );

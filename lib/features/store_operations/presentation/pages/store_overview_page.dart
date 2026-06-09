@@ -325,7 +325,7 @@ class _FeatureGrid extends StatelessWidget {
         Icons.graphic_eq_rounded,
         isEnabled: true,
         onTap: () => context.goNamed(
-          RouteNames.storeVoiceOrderDemo,
+          RouteNames.storeVoiceOrder,
           pathParameters: {'storeId': storeId.toString()},
         ),
       ),
