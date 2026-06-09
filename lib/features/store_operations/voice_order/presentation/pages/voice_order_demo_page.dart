@@ -206,10 +206,11 @@ class _HoldMicButton extends StatelessWidget {
     final innerColor = isRecording ? AppColors.error : AppColors.primary;
 
     return Center(
-      child: GestureDetector(
-        onTapDown: isProcessing ? null : (_) => onStart(),
-        onTapUp: isProcessing ? null : (_) => onStop(),
-        onTapCancel: isProcessing ? null : onStop,
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: isProcessing ? null : (_) => onStart(),
+        onPointerUp: isProcessing ? null : (_) => onStop(),
+        onPointerCancel: isProcessing ? null : (_) => onStop(),
         child: Container(
           width: 132,
           height: 132,
